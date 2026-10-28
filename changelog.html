@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ченжлог · Better Voxels</title>
+<meta name="description" content="Полный список изменений Better Voxels по версиям.">
+<script>if('scrollRestoration' in history)history.scrollRestoration='manual';try{var t=localStorage.getItem('bv-theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="i18n.css">
+<script>
+/* a visitor who will get a translation: hide the page until i18n.js has swapped the text */
+(function(){var l='';try{l=localStorage.getItem('bv-lang')||''}catch(e){}if(!l)l=(navigator.language||'ru').slice(0,2).toLowerCase();
+if(['ru','uk','be','kk'].indexOf(l)<0){document.documentElement.classList.add('i18n-wait');setTimeout(function(){document.documentElement.classList.remove('i18n-wait')},2500)}})();
+</script>
+<style>html.i18n-wait body{visibility:hidden}</style>
+<style>
+/* same clay surface and tokens as the main page (copied from index.html by changelog_build.py) */
+:root{
+  --bg:#e3e6eb;
+  --hi:#ffffff;
+  --lo:rgba(150,160,178,.62);
+  --ink:#1c1f25;
+  --ink-2:#6a717d;
+  --mute:#c3c9d2;
+  --title:#2a2e35;
+  --solid:#1e2127;
+  --solid-ink:#eef0f3;
+  --deep:#1e2127;
+  --deep-ink:#eef0f3;
+  --deep-2:#9aa1ac;
+  --barbg:rgba(227,230,235,.97);
+  --glow:#ffae57;
+  --glow-soft:rgba(255,174,87,.7);
+  --f-display:"Unbounded","Arial Black","PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  --f-body:"Golos Text","Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,"PingFang SC","Microsoft YaHei",monospace;
+  --g:clamp(16px,4vw,40px);
+  --rad:28px;
+  --io:cubic-bezier(.65,0,.35,1);
+  --xo:cubic-bezier(.16,1,.3,1);
+  --storm:#b9bfca;
+  --bolt:#5b6cff;
+  --ground:#cdd2da;
+  --scrim:rgba(214,218,226,.42);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#262a31;--hi:#30353d;--lo:rgba(8,9,12,.72);--ink:#e6e8ec;--ink-2:#99a0ac;--mute:#41464f;--title:#eceef2;
+    --solid:#e6e8ec;--solid-ink:#1c1f25;--deep:#191b20;--deep-ink:#e6e8ec;--deep-2:#8d94a0;--barbg:rgba(38,42,49,.97);--storm:#1a1d22;--bolt:#dfe6ff;--ground:#1b1e23;--scrim:rgba(14,16,20,.5);
+    color-scheme:dark}
+}
+.tv-light{
+  --bg:#e3e6eb;
+  --hi:#ffffff;
+  --lo:rgba(150,160,178,.62);
+  --ink:#1c1f25;
+  --ink-2:#6a717d;
+  --mute:#c3c9d2;
+  --title:#2a2e35;
+  --solid:#1e2127;
+  --solid-ink:#eef0f3;
+  --deep:#1e2127;
+  --deep-ink:#eef0f3;
+  --deep-2:#9aa1ac;
+  --barbg:rgba(227,230,235,.97);
+  --glow:#ffae57;
+  --glow-soft:rgba(255,174,87,.7);
+  --storm:#b9bfca;
+  --bolt:#5b6cff;
+  --ground:#cdd2da;
+  --scrim:rgba(214,218,226,.42);
+  color-scheme:light}
+:root[data-theme="dark"],.tv-dark{
+  --bg:#262a31;--hi:#30353d;--lo:rgba(8,9,12,.72);--ink:#e6e8ec;--ink-2:#99a0ac;--mute:#41464f;--title:#eceef2;
+  --solid:#e6e8ec;--solid-ink:#1c1f25;--deep:#191b20;--deep-ink:#e6e8ec;--deep-2:#8d94a0;--barbg:rgba(38,42,49,.97);--storm:#1a1d22;--bolt:#dfe6ff;--ground:#1b1e23;--scrim:rgba(14,16,20,.5);
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+html{-webkit-tap-highlight-color:transparent;scroll-behavior:smooth;scroll-padding-top:96px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+p{margin:0;text-wrap:pretty}
+.mono{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em}
+.muted{color:var(--ink-2)}
+.card{background:var(--bg);border-radius:var(--rad);padding:clamp(20px,3vw,36px);box-shadow:10px 10px 22px var(--lo),-10px -10px 22px var(--hi)}
+.btn{display:inline-flex;align-items:center;gap:10px;border:0;border-radius:999px;padding:13px 22px;background:var(--bg);color:var(--ink);text-decoration:none;
+  font-family:var(--f-mono);font-size:13px;letter-spacing:.04em;cursor:pointer;
+  box-shadow:5px 5px 12px var(--lo),-5px -5px 12px var(--hi),inset 0 0 0 transparent,inset 0 0 0 transparent;transition:box-shadow .3s var(--io),translate .4s var(--xo),scale .2s var(--io)}
+.btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media (hover:hover){ .btn:hover{translate:0 -2px} }
+.btn:active{scale:.97;box-shadow:0 0 0 transparent,0 0 0 transparent,inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+
+/* kind colours: one hue per kind, used for the tag, the counters and the row markers */
+.k-new{--k:#1bd96a;--k-ink:#0b2416}
+.k-changed{--k:#ffae57;--k-ink:#2a1700}
+.k-fixed{--k:#5b8cff;--k-ink:#ffffff}
+.k-removed{--k:#ff5468;--k-ink:#ffffff}
+
+.wrap{max-width:1040px;margin:0 auto;padding:0 var(--g) 60px}
+/* side menu, the same panel as the main page's: brand, back link, versions with dates, theme switch at the bottom */
+.switch{flex:none;position:relative;width:56px;height:32px;border:0;border-radius:999px;background:var(--bg);box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi);cursor:pointer;padding:0}
+.switch::after{content:"";position:absolute;top:5px;left:5px;width:22px;height:22px;border-radius:50%;background:var(--bg);box-shadow:3px 3px 6px var(--lo),-2px -2px 5px var(--hi);transition:transform .3s cubic-bezier(.3,.7,.2,1),background .3s,box-shadow .3s}
+.switch[aria-checked="true"]::after{transform:translateX(24px);background:radial-gradient(circle at 40% 40%,#fff3df,var(--glow) 70%);box-shadow:0 0 14px 2px var(--glow-soft),2px 2px 5px var(--lo)}
+.switch:active::after{scale:.86}
+.theme-sw::after{display:none}
+.tk{position:absolute;top:4px;left:4px;width:24px;height:24px;color:var(--ink);transition:transform .55s var(--xo),color .5s var(--io)}
+.tk svg{display:block;width:100%;height:100%;overflow:visible}
+.tk-core{fill:currentColor;transform-box:fill-box;transform-origin:center;transform:scale(.56);transition:transform .55s var(--xo)}
+.tk-bite{transform-box:fill-box;transform-origin:center;transform:translate(9px,-9px) scale(.4);transition:transform .55s var(--xo)}
+.tk-rays{stroke:currentColor;stroke-width:2;stroke-linecap:round;transform-box:view-box;transform-origin:12px 12px;transition:transform .55s var(--xo),opacity .3s var(--io)}
+.theme-sw[aria-checked="true"] .tk{transform:translateX(24px)}
+.theme-sw[aria-checked="true"] .tk-core{transform:scale(1)}
+.theme-sw[aria-checked="true"] .tk-bite{transform:none}
+.theme-sw[aria-checked="true"] .tk-rays{transform:rotate(-90deg) scale(.4);opacity:0}
+.theme-sw:active .tk{scale:.9}
+.switch::after{transition:transform .45s var(--xo),background .3s,box-shadow .3s,scale .2s var(--io)}
+:root,.tv-light{--gh-fill:#24272d;--gh-ink:#ffffff;--lamp-glow:rgba(255,178,100,.5);--mc-f:var(--ink);--mc-1:#0000aa}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--gh-fill:#ffffff;--gh-ink:#1c1f25;--lamp-glow:rgba(255,170,90,.38);--mc-f:#ffffff;--mc-1:#6575ff}}
+:root[data-theme="dark"],.tv-dark{--gh-fill:#ffffff;--gh-ink:#1c1f25;--lamp-glow:rgba(255,170,90,.38);--mc-f:#ffffff;--mc-1:#6575ff}
+.side .brand span{transition:color .25s var(--io)}
+@media (hover:hover){ .side .brand:hover .b1{color:#6575ff} .side .brand:hover .b2{color:var(--mc-f)} }
+.side{display:none}
+@media (min-width:1100px) and (min-height:520px){
+  .side{position:fixed;z-index:5;top:16px;bottom:16px;left:16px;width:236px;display:flex;flex-direction:column;gap:6px;padding:22px 14px 16px;
+    border-radius:var(--rad);background:var(--bg);box-shadow:10px 10px 22px var(--lo),-10px -10px 22px var(--hi)}
+  .side .brand{display:flex;align-items:center;gap:10px;padding:0 12px 18px;font-family:var(--f-display);font-weight:600;font-size:17px;text-decoration:none}
+  .side .logo{flex:none;width:28px;height:28px;border-radius:8px;box-shadow:3px 3px 7px var(--lo),-2px -2px 5px var(--hi)}
+  .side a.item{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;text-decoration:none;color:var(--ink-2);
+    font-family:var(--f-mono);font-size:13px;letter-spacing:.06em;transition:box-shadow .25s,color .25s}
+  .side a.item svg{flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .side a.item:not(.on):not(.back):hover{color:var(--ink)}
+  /* the way back is the one raised control in the list */
+  .side a.back{color:var(--ink);margin-bottom:4px;box-shadow:4px 4px 10px var(--lo),-4px -4px 10px var(--hi),inset 0 0 0 transparent,inset 0 0 0 transparent;transition:box-shadow .3s var(--io),scale .2s var(--io)}
+  .side a.back:active{scale:.97;box-shadow:0 0 0 transparent,0 0 0 transparent,inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+  .side .lbl{padding:18px 14px 6px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;color:var(--ink-2);opacity:.7}
+  .side a.ver-l{justify-content:space-between}
+  .side a.ver-l b{font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:0;color:inherit}
+  .side a.ver-l small{font-size:11px}
+  .side a.on{color:var(--ink);box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+  .side .langrow{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;font-size:13px;color:var(--ink-2)}
+  .side .lang-menu{top:auto;bottom:calc(100% + 10px);transform-origin:bottom right}
+  .side .theme{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;font-size:13px;color:var(--ink-2)}
+  .wrap{max-width:none;padding-left:calc(16px + 236px + var(--g));padding-right:var(--g)}
+  .wrap > *{max-width:1040px;margin-inline:auto}
+  .top{display:none}
+}
+/* floating bar like the main page's header: one raised pill holding the back button and the version switch */
+.top{position:sticky;top:12px;z-index:5;margin-top:12px}
+/* layout swap on resize (same as the main page): the incoming panel slides in, top bar from above, side menu from the left */
+@keyframes barDrop{from{transform:translateY(-140%);opacity:0}}
+@keyframes barSide{from{transform:translateX(-120%);opacity:0}}
+.bar-swap .top-in{animation:barDrop .55s var(--xo)}
+.bar-swap .side{animation:barSide .55s var(--xo)}
+/* theme reveal: everything is frozen during the circle except the sun/moon knob */
+.vt *,.vt *::before,.vt *::after{transition:none!important}
+.vt .tk,.vt .tk *{transition:transform .55s var(--xo),opacity .3s var(--io)!important}
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+::view-transition-new(root){z-index:2}
+@media (prefers-reduced-motion:reduce){ .bar-swap .top-in,.bar-swap .side{animation:none} }
+.top-in{display:flex;align-items:center;gap:10px;padding:6px;border-radius:999px;background:var(--barbg);
+  box-shadow:8px 8px 18px var(--lo),-8px -8px 18px var(--hi)}
+.top-in .btn{padding:10px 18px 10px 14px;box-shadow:4px 4px 10px var(--lo),-4px -4px 10px var(--hi),inset 0 0 0 transparent,inset 0 0 0 transparent}
+.top-in .grow{flex:1}
+.top-in > .theme{display:flex;align-items:center;padding-right:6px}
+.top-in > .theme > span{display:none}
+.jump{display:flex;gap:4px;padding:4px;border-radius:999px;box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+.jump a{padding:8px 16px;border-radius:999px;text-decoration:none;font-family:var(--f-display);font-weight:600;font-size:14px;transition:box-shadow .3s var(--io)}
+.jump a:hover,.jump a.on{box-shadow:4px 4px 10px var(--lo),-4px -4px 10px var(--hi)}
+
+.intro{padding:34px 0 34px}
+.intro h1{margin:0 0 8px;font-family:var(--f-display);font-weight:800;font-size:clamp(38px,7vw,76px);line-height:1;letter-spacing:-.035em}
+.intro p{color:var(--ink-2);max-width:52ch}
+
+.ver{display:grid;gap:30px;margin-bottom:36px}
+.ver-h{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.num{font-family:var(--f-display);font-weight:800;font-size:clamp(56px,9vw,104px);line-height:.9;letter-spacing:-.05em}
+.sums{display:flex;gap:10px;flex-wrap:wrap}
+.sum{display:grid;gap:2px;min-width:94px;padding:12px 16px;border-radius:18px;
+  box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+.sum b{font-family:var(--f-display);font-weight:600;font-size:24px;line-height:1;color:var(--k)}
+.sum span{font-family:var(--f-mono);font-size:11px;letter-spacing:.04em;color:var(--ink-2)}
+
+.grp{display:grid;gap:16px}
+.grp-h{margin:0;display:flex;align-items:center;gap:12px}
+.tag{display:inline-flex;align-items:center;gap:8px;padding:8px 16px 8px 12px;border-radius:999px;background:var(--k);color:var(--k-ink);
+  font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:-.01em;box-shadow:4px 4px 10px var(--lo),-4px -4px 10px var(--hi)}
+.tag svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.cnt{color:var(--ink-2)}
+
+/* New: raised tiles, the headline feature spans the row */
+.tiles{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.tile{display:grid;align-content:start;gap:6px;padding:16px 18px;border-radius:20px;box-shadow:5px 5px 12px var(--lo),-5px -5px 12px var(--hi)}
+.tile strong{display:block;font-family:var(--f-display);font-weight:600;font-size:15px;line-height:1.25;letter-spacing:-.01em}
+.tile strong::before{content:"";display:inline-block;width:8px;height:8px;margin-right:8px;vertical-align:.12em;border-radius:50%;background:var(--k);box-shadow:0 0 8px var(--k)}
+.tile p{font-size:14px;color:var(--ink-2)}
+.tile.wide{grid-column:span 2}
+.tile.hero-tile{grid-column:1 / -1;padding:22px 24px}
+.hero-tile strong{font-size:clamp(20px,2.6vw,26px)}
+.hero-tile p{font-size:15px;max-width:70ch}
+.beta{display:inline-block;margin-left:10px;vertical-align:.25em;padding:3px 9px;border-radius:999px;background:var(--k);color:var(--k-ink);font-size:10px;letter-spacing:.06em}
+
+/* Changed / Fixed / Removed: rows sunk into one well, a coloured notch on each */
+.rows{list-style:none;margin:0;padding:8px;display:grid;gap:4px;border-radius:22px;box-shadow:inset 5px 5px 11px var(--lo),inset -5px -5px 11px var(--hi)}
+.rows > li{display:grid;gap:10px;padding:12px 14px 12px 34px;position:relative;font-size:15px}
+.rows > li::before{content:"";position:absolute;left:16px;top:20px;width:6px;height:6px;border-radius:50%;background:var(--k)}
+.rows > li + li{border-top:1px solid color-mix(in srgb,var(--ink) 7%,transparent)}
+
+.chips{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.chips li{padding:5px 10px;border-radius:10px;font-family:var(--f-mono);font-size:11px;letter-spacing:.02em;color:var(--ink-2);box-shadow:inset 2px 2px 4px var(--lo),inset -2px -2px 4px var(--hi)}
+.rows .chips{gap:10px 12px;margin-left:-10px}
+.rows .chips li{box-shadow:3px 3px 7px var(--lo),-3px -3px 7px var(--hi)}
+.stats{display:flex;flex-wrap:wrap;gap:10px}
+.st{display:grid;padding:10px 14px;border-radius:16px;box-shadow:4px 4px 10px var(--lo),-4px -4px 10px var(--hi)}
+.st b{font-family:var(--f-display);font-weight:600;font-size:20px;line-height:1.1;color:var(--k)}
+.st span{font-family:var(--f-mono);font-size:11px;color:var(--ink-2)}
+
+/* older versions: a faded stub */
+.older{display:flex;align-items:baseline;gap:18px;padding:22px 28px;border-radius:var(--rad);color:var(--ink-2);box-shadow:inset 6px 6px 12px var(--lo),inset -6px -6px 12px var(--hi)}
+.older .num{font-size:clamp(40px,6vw,64px);color:var(--ink-2)}
+.older .dots{font-family:var(--f-display);font-weight:800;font-size:40px;letter-spacing:.1em;line-height:1}
+
+@media (max-width:860px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:560px){
+  .tiles{grid-template-columns:minmax(0,1fr)} .tile.wide{grid-column:auto}
+  .ver{gap:22px}
+  /* the four counters: one even row across the card, number over a small label */
+  .sums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;width:100%}
+  .sum{min-width:0;padding:8px 4px;border-radius:14px;justify-items:center;text-align:center}
+  .sum b{font-size:18px}
+  .sum span{font-size:9px;letter-spacing:0;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .rows > li{font-size:14px}
+  .top-in .btn span{display:none}
+  .top-in{flex-wrap:wrap;border-radius:24px}
+  .top-in .jump{order:2;flex-basis:100%;justify-content:center}
+}
+@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
+</style>
+</head>
+<body>
+<aside class="side" aria-label="Навигация">
+  <a class="brand" href="index.html"><img class="logo" src="shots/logo.webp" width="28" height="28" alt=""><span class="b1">Better</span> <span class="b2">Voxels</span></a>
+  <a class="item back" href="index.html#versions"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>На главную</a>
+  <a class="item" href="technologies.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5h5.5A3.5 3.5 0 0 1 12 9v11a2.5 2.5 0 0 0-2.5-2.5H3z"/><path d="M21 5.5h-5.5A3.5 3.5 0 0 0 12 9v11a2.5 2.5 0 0 1 2.5-2.5H21z"/></svg>Технологии</a>
+  <div class="lbl">Версии</div>
+  <a class="item ver-l" href="#v1.8"><b>1.8</b><small>25 сен 2026</small></a>
+  <a class="item ver-l" href="#v1.7"><b>1.7</b><small>1 сен 2026</small></a>
+  <a class="item ver-l" href="#v1.6"><b>1.6</b><small>…</small></a>
+  <div class="langrow"><span>Язык</span><div data-langsel></div></div>
+  <div class="theme"><span>Тёмная тема</span><button class="switch theme-sw" id="theme" role="switch" aria-checked="false" aria-label="Тёмная тема"><span class="tk" aria-hidden="true"><svg viewBox="0 0 24 24"><mask id="tkm"><rect width="24" height="24" fill="#fff"/><circle class="tk-bite" cx="17" cy="7" r="7.5" fill="#000"/></mask><circle class="tk-core" cx="12" cy="12" r="8.5" mask="url(#tkm)"/><g class="tk-rays"><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(0 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(45 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(90 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(135 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(180 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(225 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(270 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(315 12 12)"/></g></svg></span></button></div>
+</aside>
+<div class="wrap">
+  <div class="top"><div class="top-in">
+    <a class="btn" href="index.html#versions" aria-label="На главную"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg><span>На главную</span></a>
+    <div class="grow"></div>
+    <nav class="jump" aria-label="Версии"><a href="#v1.8">1.8</a><a href="#v1.7">1.7</a><a href="#v1.6">1.6</a></nav>
+    <div data-langsel></div>
+  </div></div>
+  <header class="intro">
+    <h1>Ченжлог</h1>
+    <p>Все изменения Better Voxels по версиям — от самой новой до первой.</p>
+  </header>
+<article class="ver card" id="v1.8"><header class="ver-h"><div><div class="num">1.8</div><div class="mono muted">25 сентября 2026</div></div><div class="sums" aria-label="Итог версии 1.8"><div class="sum k-new"><b>17</b><span>Новое</span></div><div class="sum k-changed"><b>5</b><span>Изменено</span></div><div class="sum k-fixed"><b>6</b><span>Исправлено</span></div><div class="sum k-removed"><b>1</b><span>Удалено</span></div></div></header><section id="v1.8-new" class="grp k-new"><h3 class="grp-h"><span class="tag"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Новое</span><span class="cnt mono">17</span></h3><ul class="tiles"><li class="tile hero-tile"><strong>Облака Nubis Extended<span class="beta mono">бета</span></strong><p>Реалистичные объёмные облака, теперь по умолчанию: 8 типов облаков, дрейфующая погода, облака, которые вырастают прямо из воздуха, тени от облаков и отражения в воде. Технология в бете — любые баг-репорты очень помогут!</p></li><li class="tile"><strong>Второй слой облаков</strong><p>Второй ярус для облаков Reimagined и Unbound.</p></li><li class="tile"><strong>Цветокоррекция с нуля</strong><p>16 тонмапперов, цветовой грейдинг, цветовые пространства и Night Vision.</p></li><li class="tile"><strong>Цвета заката</strong><p>5 палитр заката или случайная каждый день.</p></li><li class="tile"><strong>Дальняя дымка</strong><p>Дальний рельеф синеет и растворяется в горизонте.</p></li><li class="tile"><strong>Поддержка Voxy</strong></li><li class="tile"><strong>Страница Distant Horizons</strong><p>Настройки того, как рисуется дальний рельеф.</p></li><li class="tile"><strong>Плавный луч маяка</strong><p>Луч поднимается в небо, а не появляется рывком.</p></li><li class="tile"><strong>Страница Better Thunder</strong><p>Цвет молний и молнии внутри облаков.</p></li><li class="tile"><strong>Нехватка кислорода</strong><p>Удушье под водой видно на экране.</p></li><li class="tile"><strong>Свой скайбокс</strong><p>Небо из ресурспаков рисуется правильно.</p></li><li class="tile"><strong>Дождь и брызги по биомам</strong><p>Biome Rain Color и Biome Water Particles.</p></li><li class="tile"><strong>Модовые биомы</strong><p>Цвета тумана для биомов из модов.</p></li><li class="tile"><strong>Всегда реалистичная луна</strong><p>HD-фото луны всегда включено для луны Unbound.</p></li><li class="tile"><strong>Осеннее разнообразие</strong><p>Осенью деревья желтеют каждое по-своему.</p></li><li class="tile"><strong>Фильтр City Night</strong></li><li class="tile"><strong>Свечение ресурспаков</strong><p>Ползунок Resource Pack Emission Light.</p></li></ul></section><section id="v1.8-changed" class="grp k-changed"><h3 class="grp-h"><span class="tag"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-9a5 5 0 0 0 0 10h5M17 4l3 3-3 3"/></svg>Изменено</span><span class="cnt mono">5</span></h3><ul class="rows"><li><p>Пост-профиль Cinematic переработан.</p></li><li><p>Глобальное освещение по умолчанию Subtle на профилях от Low до High+.</p></li><li><p>Update Cone Direction during RT включён только на Ultra и UltraMax — больше FPS рядом с лавой.</p></li><li><p>Motion Blur и Depth of Field по умолчанию выключены.</p></li><li><p>Переключение профилей больше не оставляет настройки от предыдущего.</p></li></ul></section><section id="v1.8-fixed" class="grp k-fixed"><h3 class="grp-h"><span class="tag"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Исправлено</span><span class="cnt mono">6</span></h3><ul class="rows"><li><p>Модовые светящиеся блоки и сущности не давали света.</p></li><li><p>Светящиеся текстуры ресурспаков были слишком яркими.</p></li><li><p>World Curvature прятал рельеф Distant Horizons.</p></li><li><p>Тёмная листва с ресурспаком Better Leaves.</p></li><li><p>Вода просвечивала сквозь края облаков при взгляде сверху.</p></li><li><p>Баг с водой в Voxy.</p></li></ul></section><section id="v1.8-removed" class="grp k-removed"><h3 class="grp-h"><span class="tag"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>Удалено</span><span class="cnt mono">1</span></h3><ul class="rows"><li><p>Старая страница Color Correction, Night Desaturation и Double Reimagined Clouds — все три заменены новыми функциями.</p></li></ul></section></article><article class="ver card" id="v1.7"><header class="ver-h"><div><div class="num">1.7</div><div class="mono muted">1 сентября 2026</div></div><div class="sums" aria-label="Итог версии 1.7"><div class="sum k-new"><b>10</b><span>Новое</span></div><div class="sum k-changed"><b>8</b><span>Изменено</span></div><div class="sum k-fixed"><b>5</b><span>Исправлено</span></div></div></header><section id="v1.7-new" class="grp k-new"><h3 class="grp-h"><span class="tag"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Новое</span><span class="cnt mono">10</span></h3><ul class="tiles"><li class="tile hero-tile wide"><strong>Вкладка Tonemaps</strong><p>11 кривых, выбираются отдельно от режима цветокоррекции.</p><ul class="chips"><li>BSL</li><li>Complementary (Lottes)</li><li>AgX</li><li>Photorealistic</li><li>Reinhard</li><li>Reinhard White Point</li><li>Filmic (Hejl)</li><li>ACES</li><li>Uncharted 2 (Hable)</li><li>PBR Neutral</li></ul></li><li class="tile wide"><strong>Автоэкспозиция заново</strong><p>Теперь реагирует на то, что в кадре, а не на общий уровень света. Посмотрите на лампу — мир вокруг темнеет; на несколько ламп — темнеет сильнее; яркий день остаётся как есть.</p><ul class="chips"><li>Highlight Response</li><li>Highlight Threshold</li><li>Centre Bias</li><li>Shadow and Highlight Weight</li><li>Metering Samples</li><li>Classic level-following</li></ul></li><li class="tile"><strong>Режим 2KS</strong><p>Постобработка «под видеокамеру», перенесена из шейдерпака 2KS с разрешения автора, с большинством оригинальных настроек. Стоит рядом с BodyCam и работает на всех трёх страницах постобработки.</p></li><li class="tile"><strong>Better Thunder</strong><p>Пока идёт гроза, облачный слой опускается, а каждый разряд подсвечивает его изнутри. Облака и земля вспыхивают от одного сигнала.</p></li><li class="tile"><strong>Нет дождя над облаками</strong><p>Осадки исчезают, когда вы поднимаетесь сквозь нижний слой облаков. Работает с обоими стилями облаков.</p></li><li class="tile"><strong>Цвета полярного сияния</strong><p>7 палитр: Oxygen, Deep Freeze, Emberlight, Neon, Acid, Spectrum и оригинальная.</p></li><li class="tile"><strong>Night Desaturation</strong><p>Цвет уходит из тёмных частей кадра, с замером по каждому пикселю: освещённый дверной проём сохраняет цвет, а поле рядом бледнеет.</p></li><li class="tile"><strong>Цвета биомов Незера</strong><p>Порталы и лава принимают цвет своего биома: багровый, бирюзовый в искажённом лесу, синий в долине душ, пепельный в базальтовых дельтах. По умолчанию выключено, сила — отдельно для каждого.</p></li><li class="tile"><strong>Вкладка Fun</strong><p>13 шуточных эффектов: от покачивания каждого блока в мире до превращения их всех в шары.</p></li><li class="tile"><strong>World Curvature на ползунках</strong><p>Вместо фиксированных шагов.</p></li></ul></section><section id="v1.7-changed" class="grp k-changed"><h3 class="grp-h"><span class="tag"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-9a5 5 0 0 0 0 10h5M17 4l3 3-3 3"/></svg>Изменено</span><span class="cnt mono">8</span></h3><ul class="rows"><li><p>Атмосфера биомов переработана. 64 записи биомов — это цвета, но применялись они как множители, а множитель не может сдвинуть оттенок: синий полуденный туман на зелёной тайге давал голубой, а тёплые биомы выходили синими. Теперь они управляют оттенком при сохранённой яркости. Исправлены восемь записей, цвет которых не совпадал с биомом: Windswept Forest, Flower Forest, Meadow, Cherry Grove, Mangrove Swamp, Wooded Badlands, Warm Ocean, Basalt Deltas.</p><div class="stats"><div class="st"><b>36° → 4°</b><span>ошибка оттенка в полдень</span></div><div class="st"><b>89° → 8°</b><span>на закате</span></div><div class="st"><b>1,8%</b><span>среднее изменение яркости</span></div></div></li><li><p>В Biome Atmosphere добавлен Apply to Sky. По умолчанию выключен — небо в основном остаётся своего цвета.</p></li><li><p>Ночь темнее, а днём больше нет пересвета. Настройки солнца взяты из v1.3.</p></li><li><p>Глобальное освещение по умолчанию выключено на High+ и ниже.</p></li><li><p>Подводные лучи света по умолчанию тусклее.</p></li><li><p>Усиление Night Vision снижено с 5 до 3. Теперь оно включается, когда темнеет сцена, а не только ночью: зайдите в шахту в полдень — и оно сработает.</p></li><li><p>Cinematic и Particles переехали в Misc.</p></li><li><p>Новые значения High+ по умолчанию:</p><ul class="chips"><li>Anisotropic Filter 4</li><li>Aurora Colours Deep Freeze</li><li>Saturation 1.15</li><li>GI Samples 7</li><li>Night Nebula вкл.</li><li>No Rain Above Clouds вкл.</li><li>World Curvature altitude 1024</li></ul></li></ul></section><section id="v1.7-fixed" class="grp k-fixed"><h3 class="grp-h"><span class="tag"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Исправлено</span><span class="cnt mono">5</span></h3><ul class="rows"><li><p>Полярное сияние двигалось рывками при Smooth Time Transition, пока остальное небо плыло плавно. Теперь оно идёт по тем же сглаженным часам, что облака, звёзды и туманность.</p></li><li><p>Автоэкспозиция почти ничего не делала: её цель была выше уровня, до которого реально доходят сцены, и результат в каждой сцене упирался в одно и то же значение.</p></li><li><p>Auto Night Vision никогда не включался на профиле Potato.</p></li><li><p>Включение ночного зрения приседанием не могло работать: шейдер читал uniform, который никто не создавал.</p></li><li><p>Пять мелких дефектов и два осиротевших пункта меню.</p></li></ul></section></article>  <div class="older" id="v1.6"><span class="num">1.6</span><span class="dots" aria-label="и более ранние">…</span></div>
+</div>
+<script>
+// the version pill under the reading line lights up
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.jump a, .side a.ver-l'));
+  var secs = links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); });
+  var tick = false;
+  function upd(){
+    tick = false;
+    var y = innerHeight * .35, cur = 0;
+    var top = -1;
+    secs.forEach(function(s, k){ if (s.getBoundingClientRect().top < y) top = s; });
+    if (top === -1) top = secs[0];
+    links.forEach(function(a, k){ a.classList.toggle('on', secs[k] === top); });
+  }
+  addEventListener('scroll', function(){ if (!tick){ tick = true; requestAnimationFrame(upd); } }, {passive:true});
+  upd();
+})();
+// crossing the side-menu / top-bar line while resizing: the new panel slides in
+(function(){
+  var root = document.documentElement, mq = matchMedia('(min-width:1100px) and (min-height:520px)'), t = 0;
+  function swap(){ root.classList.remove('bar-swap'); void root.offsetWidth; root.classList.add('bar-swap'); clearTimeout(t); t = setTimeout(function(){ root.classList.remove('bar-swap'); }, 700); }
+  // checked on resize too: some browsers and emulators skip the media 'change' event
+  var was = mq.matches;
+  var themeRow=document.querySelector('.side .theme'),side=document.querySelector('.side'),topBar=document.querySelector('.top-in');
+  function placeTheme(){var parent=mq.matches?side:topBar;if(themeRow.parentNode!==parent)parent.appendChild(themeRow);}
+  function check(){ var m = mq.matches; placeTheme(); if (m !== was){ was = m; swap(); } }
+  placeTheme();
+  if (mq.addEventListener) mq.addEventListener('change', check);
+  addEventListener('resize', check);
+})();
+// the page always opens at its top, even if the address carries a #version or the browser remembered a position
+if (location.hash) history.replaceState(null, '', location.pathname);
+scrollTo(0, 0); addEventListener('load', function(){ scrollTo(0, 0); });
+(function(){
+  var root = document.documentElement, sw = document.getElementById('theme'), mq = matchMedia('(prefers-color-scheme: dark)');
+  function cur(){ var t = root.getAttribute('data-theme'); return t || (mq.matches ? 'dark' : 'light'); }
+  function sync(){ sw.setAttribute('aria-checked', cur() === 'dark' ? 'true' : 'false'); }
+  function apply(n){
+    root.setAttribute('data-theme', n);
+    try { localStorage.setItem('bv-theme', n); } catch (e) {}
+    sync();
+  }
+  // same reveal as the main page: the new theme opens in a circle from the switch (View Transitions),
+  // the sun/moon knob keeps flying inside it; no cooldown, a click mid-reveal starts the next one
+  var want = null, gen = 0, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  sw.addEventListener('click', function(){
+    var n = (want || cur()) === 'dark' ? 'light' : 'dark';
+    want = n; var my = ++gen;
+    if (reduce || !document.startViewTransition){ apply(n); want = null; return; }
+    var r = sw.getBoundingClientRect(), x = r.left + r.width/2, y = r.top + r.height/2;
+    var H = Math.max(innerHeight, document.documentElement.clientHeight, (window.visualViewport && visualViewport.height) || 0, screen.height || 0);
+    var R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, H - y)) * 1.12 + 8;
+    var vtr = document.startViewTransition(function(){ root.classList.add('vt'); apply(n); });
+    vtr.ready.then(function(){
+      root.animate({clipPath:['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + R + 'px at ' + x + 'px ' + y + 'px)']},
+        {duration:750, easing:'cubic-bezier(.33,.7,.35,1)', pseudoElement:'::view-transition-new(root)'});
+    }).catch(function(){});
+    var done = function(){ if (my === gen){ root.classList.remove('vt'); want = null; } };
+    vtr.finished.then(done, done);
+  });
+  sync();
+})();
+</script>
+<script src="motion-blur.js" defer></script>
+<script src="i18n-dict.js"></script>
+<script src="i18n.js"></script>
+</body>
+</html>

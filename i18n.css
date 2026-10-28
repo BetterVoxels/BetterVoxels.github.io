@@ -1,0 +1,17 @@
+/* language picker (built by i18n.js into every [data-langsel]): a raised pill, globe + code, and a small clay menu.
+   Uses the page tokens (--bg --lo --hi --ink --ink-2 --f-*); placement is up to each page. */
+.langsel{position:relative}
+.lang-btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:7px 12px 7px 9px;background:var(--bg);color:var(--ink);
+  font-family:var(--f-mono);font-size:12px;letter-spacing:.04em;cursor:pointer;
+  box-shadow:3px 3px 7px var(--lo),-3px -3px 7px var(--hi),inset 0 0 0 transparent,inset 0 0 0 transparent;transition:box-shadow .3s var(--io),scale .2s var(--io),background-color .5s var(--io)}
+.lang-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+.lang-btn:active,.langsel.open .lang-btn{scale:.97;box-shadow:0 0 0 transparent,0 0 0 transparent,inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+.lang-menu{position:absolute;z-index:30;right:0;top:calc(100% + 10px);min-width:176px;list-style:none;margin:0;padding:6px;border-radius:18px;background:var(--bg);
+  box-shadow:8px 8px 18px var(--lo),-8px -8px 18px var(--hi);opacity:0;visibility:hidden;transform:translateY(-6px) scale(.97);transform-origin:top right;pointer-events:none;
+  transition:opacity .2s var(--io),transform .3s var(--xo),visibility 0s .3s}
+.langsel.open .lang-menu{opacity:1;visibility:visible;transform:none;pointer-events:auto;transition:opacity .2s var(--io),transform .35s var(--xo),visibility 0s}
+.lang-menu button{display:flex;width:100%;align-items:center;justify-content:space-between;gap:14px;border:0;background:transparent;padding:10px 12px;border-radius:12px;
+  font-family:var(--f-body);font-size:14px;color:var(--ink-2);cursor:pointer;transition:color .2s var(--io),box-shadow .3s var(--io)}
+.lang-menu button small{font-family:var(--f-mono);font-size:11px;letter-spacing:.04em}
+.lang-menu button:hover,.lang-menu button:focus-visible{color:var(--ink)}
+.lang-menu button[aria-selected="true"]{color:var(--ink);box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}

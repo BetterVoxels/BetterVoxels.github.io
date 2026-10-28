@@ -1,0 +1,1765 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>
+/* a visitor who will get a translation: hide the page until i18n.js has swapped the text (no Russian flash) */
+(function(){var l='';try{l=localStorage.getItem('bv-lang')||''}catch(e){}if(!l)l=(navigator.language||'ru').slice(0,2).toLowerCase();
+if(['ru','uk','be','kk'].indexOf(l)<0){document.documentElement.classList.add('i18n-wait');setTimeout(function(){document.documentElement.classList.remove('i18n-wait')},2500)}})();
+</script>
+<style>html.i18n-wait body{visibility:hidden}</style>
+<title>Better Voxels</title>
+<style>
+/* phones paint a blue box on every tap (Android Chrome tap highlight); the buttons already press in, so drop it */
+html{-webkit-tap-highlight-color:transparent}
+*{-webkit-tap-highlight-color:transparent}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<!-- fonts are self-hosted (fonts/fonts.css, latin + cyrillic woff2): Google Fonts is not always reachable for visitors -->
+<link rel="preload" href="fonts/Unbounded-800-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/Unbounded-300-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="i18n.css">
+<style>
+/* Layout: one soft clay surface; every block is pressed out of it or sunk into it, arranged like the shader's own settings menu */
+:root{
+  --bg:#e3e6eb;
+  --hi:#ffffff;
+  --lo:rgba(150,160,178,.62);
+  --ink:#1c1f25;
+  --ink-2:#6a717d;
+  --mute:#c3c9d2;
+  --title:#2a2e35;
+  --solid:#1e2127;
+  --solid-ink:#eef0f3;
+  --deep:#1e2127;
+  --deep-ink:#eef0f3;
+  --deep-2:#9aa1ac;
+  --barbg:rgba(227,230,235,.97);
+  --glow:#ffae57;
+  --glow-soft:rgba(255,174,87,.7);
+  --f-display:"Unbounded","Arial Black","PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  --f-body:"Golos Text","Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,"PingFang SC","Microsoft YaHei",monospace;
+  --g:clamp(16px,4vw,40px);
+  --rad:28px;
+  --io:cubic-bezier(.65,0,.35,1);
+  --xo:cubic-bezier(.16,1,.3,1);
+  --storm:#b9bfca;
+  --bolt:#5b6cff;
+  --ground:#cdd2da;
+  --scrim:rgba(214,218,226,.42);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#262a31;--hi:#30353d;--lo:rgba(8,9,12,.72);--ink:#e6e8ec;--ink-2:#99a0ac;--mute:#41464f;--title:#eceef2;
+    --solid:#e6e8ec;--solid-ink:#1c1f25;--deep:#191b20;--deep-ink:#e6e8ec;--deep-2:#8d94a0;--barbg:rgba(38,42,49,.97);--storm:#1a1d22;--bolt:#dfe6ff;--ground:#1b1e23;--scrim:rgba(14,16,20,.5);
+    color-scheme:dark}
+}
+.tv-light{
+  --bg:#e3e6eb;
+  --hi:#ffffff;
+  --lo:rgba(150,160,178,.62);
+  --ink:#1c1f25;
+  --ink-2:#6a717d;
+  --mute:#c3c9d2;
+  --title:#2a2e35;
+  --solid:#1e2127;
+  --solid-ink:#eef0f3;
+  --deep:#1e2127;
+  --deep-ink:#eef0f3;
+  --deep-2:#9aa1ac;
+  --barbg:rgba(227,230,235,.97);
+  --glow:#ffae57;
+  --glow-soft:rgba(255,174,87,.7);
+  --storm:#b9bfca;
+  --bolt:#5b6cff;
+  --ground:#cdd2da;
+  --scrim:rgba(214,218,226,.42);
+  color-scheme:light}
+:root[data-theme="dark"],.tv-dark{
+  --bg:#262a31;--hi:#30353d;--lo:rgba(8,9,12,.72);--ink:#e6e8ec;--ink-2:#99a0ac;--mute:#41464f;--title:#eceef2;
+  --solid:#e6e8ec;--solid-ink:#1c1f25;--deep:#191b20;--deep-ink:#e6e8ec;--deep-2:#8d94a0;--barbg:rgba(38,42,49,.97);--storm:#1a1d22;--bolt:#dfe6ff;--ground:#1b1e23;--scrim:rgba(14,16,20,.5);
+  color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+.scroller{position:fixed;inset:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-y:none;scroll-behavior:smooth;padding-bottom:env(safe-area-inset-bottom,0px)}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;transition:background-color .4s,color .4s}
+a{color:inherit}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ink);outline-offset:4px;border-radius:12px}
+.wrap{max-width:1320px;margin-inline:auto;padding-inline:var(--g)}
+section{padding-block:clamp(36px,4.5vw,72px)}
+#get{padding-bottom:16px}
+
+/* surfaces */
+.card{background:var(--bg);border-radius:var(--rad);padding:clamp(20px,2.6vw,30px);transition:background-color .4s;
+  box-shadow:10px 10px 22px var(--lo),-10px -10px 22px var(--hi)}
+.card.deep{background:var(--deep);color:var(--deep-ink)}
+.card.deep .muted{color:var(--deep-2)}
+.inset{box-shadow:inset 6px 6px 12px var(--lo),inset -6px -6px 12px var(--hi);background:var(--bg)}
+.inset-sm{box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+.raise-sm{box-shadow:5px 5px 12px var(--lo),-5px -5px 12px var(--hi);background:var(--bg)}
+
+/* type */
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;color:var(--ink-2)}
+h2{margin:0;font-family:var(--f-display);font-weight:600;font-size:clamp(26px,3.4vw,42px);line-height:1.1;letter-spacing:-.025em;text-wrap:balance}
+h3{margin:0;font-family:var(--f-display);font-weight:600;font-size:18px;letter-spacing:-.015em}
+p{margin:0;max-width:56ch;text-wrap:pretty}
+.muted{color:var(--ink-2)}
+.small{font-size:14px}
+.mono{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em}
+.head{display:grid;gap:14px;margin-bottom:clamp(28px,4vw,44px)}
+.col{display:grid;gap:clamp(20px,3vw,32px);align-content:start}
+
+/* controls */
+.btn{display:inline-flex;align-items:center;gap:10px;border:0;border-radius:999px;padding:15px 24px;background:var(--bg);box-shadow:5px 5px 12px var(--lo),-5px -5px 12px var(--hi);
+  font-family:var(--f-mono);font-size:13px;letter-spacing:.04em;text-decoration:none;cursor:pointer;transition:box-shadow .18s,transform .18s,background-color .4s}
+
+.btn.solid{background:var(--solid);color:var(--solid-ink)}
+.btns{display:flex;flex-wrap:wrap;gap:14px}
+
+.switch{flex:none;position:relative;width:56px;height:32px;border:0;border-radius:999px;background:var(--bg);box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi);cursor:pointer;padding:0}
+.switch::after{content:"";position:absolute;top:5px;left:5px;width:22px;height:22px;border-radius:50%;background:var(--bg);box-shadow:3px 3px 6px var(--lo),-2px -2px 5px var(--hi);transition:transform .3s cubic-bezier(.3,.7,.2,1),background .3s,box-shadow .3s}
+.switch[aria-checked="true"]::after{transform:translateX(24px);background:radial-gradient(circle at 40% 40%,#fff3df,var(--glow) 70%);box-shadow:0 0 14px 2px var(--glow-soft),2px 2px 5px var(--lo)}
+
+/* small raised icon chip (replaced the glowing dots): same clay as the feature icons, just smaller */
+.pic{flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--bg);box-shadow:3px 3px 7px var(--lo),-3px -3px 7px var(--hi)}
+.pic svg{width:18px;height:18px;stroke:var(--ink-2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.point .pic{width:44px;height:44px;margin-bottom:2px}
+.point .pic svg{width:21px;height:21px;stroke:var(--ink)}
+.glowdot{position:relative;width:10px;height:10px;border-radius:50%;flex:none;background:radial-gradient(circle at 40% 40%,#fff3df,var(--glow) 70%);box-shadow:0 0 12px 2px var(--glow-soft)}
+.glowdot.off{background:var(--mute);box-shadow:inset 2px 2px 4px var(--lo),inset -2px -2px 4px var(--hi)}
+
+/* header */
+.bar{position:fixed;z-index:20;top:calc(env(safe-area-inset-top,0px) + 12px);left:var(--g);right:calc(var(--g) + var(--sbw,0px));max-width:calc(1320px - 2 * var(--g));margin-inline:auto;
+  display:flex;align-items:center;gap:14px;padding:8px 8px 8px 22px;border-radius:999px;background:var(--barbg);box-shadow:8px 8px 20px var(--lo),-8px -8px 20px var(--hi)}
+.brand{font-family:var(--f-display);font-weight:600;font-size:15px;text-decoration:none;white-space:nowrap}
+/* brand: the BV logo as a small rounded square in front of the name */
+.brand{display:inline-flex;align-items:center;gap:10px}
+/* hovering the name paints it like the pack's name on the loading screen: Better dark blue, Voxels white (§1 / §f tokens) */
+.bn span{transition:color .25s var(--io)}
+/* "Better" takes the same bright §1 blue in both themes (the dark-theme value reads well on the light clay too) */
+@media (hover:hover){ .brand:hover .b1{color:#6575ff} .brand:hover .b2{color:var(--mc-f)} }
+.brand .logo{flex:none;width:28px;height:28px;border-radius:8px;box-shadow:3px 3px 7px var(--lo),-2px -2px 5px var(--hi)}
+.nav{display:flex;gap:6px;margin-left:auto}
+.nav a{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;text-decoration:none;color:var(--ink-2);padding:9px 14px;border-radius:999px;transition:box-shadow .25s,color .25s}
+.nav a.on{color:var(--ink);box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+/* hover: the item brightens to full ink and the icon steps right (no press) */
+.nav a svg{transition:translate .3s var(--xo)}
+@media (hover:hover){
+  .nav a:not(.on):hover{color:var(--ink)}
+  .nav a:hover svg{translate:2px 0}
+}
+.theme{display:flex;align-items:center;gap:8px}
+.theme .ico{font-size:14px;line-height:1;color:var(--ink-2)}
+.vpill{font-family:var(--f-mono);font-size:12px;text-decoration:none;padding:9px 14px;border-radius:999px;background:var(--solid);color:var(--solid-ink);white-space:nowrap}
+
+/* sidebar: on wide screens the bar becomes a fixed panel on the left of the content */
+.nav a svg{display:none;flex:none;width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.theme .theme-l{display:none;font-size:13px;color:var(--ink-2)}
+@media (min-width:1100px) and (min-height:520px){
+  :root{--side:236px}
+  main{padding-left:calc(var(--g) + var(--side))}
+  .bar{top:16px;bottom:16px;right:auto;left:16px;width:var(--side);max-width:none;margin:0;
+    flex-direction:column;align-items:stretch;gap:6px;padding:22px 14px 16px;border-radius:var(--rad)}
+  .brand{padding:0 12px 18px;font-size:17px}
+  .nav{flex-direction:column;gap:6px;margin:0}
+  /* other pages sit apart from the section links: a thin sunk divider above them */
+  .nav-x{margin-top:10px;padding-top:12px;position:relative}
+  .nav-x::before{content:"";position:absolute;top:0;left:14px;right:14px;height:2px;border-radius:2px;box-shadow:inset 1px 1px 2px var(--lo),inset -1px -1px 2px var(--hi)}
+  .nav a{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;font-size:13px}
+  .nav a svg{display:block}
+  .theme{margin-top:auto;justify-content:space-between;padding:10px 12px}
+  .theme .ico{display:none}
+  .theme .theme-l{display:inline}
+  .vpill{display:block;text-align:center;padding:14px;font-size:13px;margin-top:8px}
+  .progress,.topfade{display:none}
+  .hero.hero{padding-top:16px}
+}
+
+/* hero: the big cover shot with the title on it; the scenes swap on it, controls sit in its corner */
+.hero{padding-top:calc(env(safe-area-inset-top,0px) + 92px);padding-bottom:0}
+.screen{position:relative;min-height:min(70svh,720px);border-radius:var(--rad);overflow:hidden;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;
+  padding:clamp(22px,4vw,56px);color:#f2f4f7;background:var(--bg)}
+.screen .layer{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity .9s var(--io);-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - var(--rad) - 24px),transparent calc(100% - var(--rad) - 2px));mask-image:linear-gradient(to bottom,#000 calc(100% - var(--rad) - 24px),transparent calc(100% - var(--rad) - 2px))}
+.screen .layer.on{opacity:1}
+.screen::after{content:"";position:absolute;inset:-1px;background:linear-gradient(to top,var(--bg) calc(var(--rad) + 2px),color-mix(in srgb,var(--bg) 26%,transparent) 55%,transparent);pointer-events:none}
+.hero-copy{position:relative;z-index:1;max-width:760px}
+.screen .btn:not(.solid){color:var(--ink)}
+.title{margin:0 0 clamp(14px,2vw,22px);font-family:var(--f-display);font-size:clamp(40px,9vw,120px);line-height:.95;letter-spacing:-.045em}
+/* hollow outline drawn around the whole letter shape, so overlapping glyph contours stay hidden */
+.title .o{display:block;font-weight:300;color:transparent;--ink:var(--title);
+  text-shadow:1.60px 0 0 var(--ink),1.48px .61px 0 var(--ink),1.13px 1.13px 0 var(--ink),.61px 1.48px 0 var(--ink),0 1.60px 0 var(--ink),-.61px 1.48px 0 var(--ink),-1.13px 1.13px 0 var(--ink),-1.48px .61px 0 var(--ink),-1.60px 0 0 var(--ink),-1.48px -.61px 0 var(--ink),-1.13px -1.13px 0 var(--ink),-.61px -1.48px 0 var(--ink),0 -1.60px 0 var(--ink),.61px -1.48px 0 var(--ink),1.13px -1.13px 0 var(--ink),1.48px -.61px 0 var(--ink)}
+/* at this tight tracking the two t crossbars touch and the outline traces them as one bar: open the pair */
+.title .o .tt{margin-left:.07em}
+/* the thin B has a wider left side-bearing than the bold V: pull "Better" left so both start on one line */
+.title .o{margin-left:-.07em}
+.title .s{display:block;font-weight:800;color:var(--title);text-shadow:0 4px 24px var(--lo)}
+.tag{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em;color:#dde1e8;margin:0 0 clamp(18px,2.4vw,28px)}
+.lead{font-size:clamp(16px,1.4vw,19px);margin-bottom:26px;max-width:52ch;color:var(--ink)}
+.player{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-left:auto}
+.rbtn{flex:none;display:grid;place-items:center;width:56px;height:56px;border:0;padding:0;border-radius:50%;cursor:pointer;background:var(--bg);box-shadow:5px 5px 12px var(--lo),-5px -5px 12px var(--hi);transition:box-shadow .3s var(--io),background-color .5s var(--io)}
+.rbtn.big{width:54px;height:54px}
+
+.rbtn svg{width:22px;height:22px;stroke:var(--ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rbtn .i-play{display:none}
+.rbtn[aria-pressed="false"] .i-play{display:block}.rbtn[aria-pressed="false"] .i-pause{display:none}
+.now{min-width:0;display:grid;gap:4px;max-width:340px;text-align:right}
+.now b{font-family:var(--f-display);font-weight:600;font-size:clamp(17px,1.6vw,22px)}
+.now span{font-size:14px;color:#c9ced8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dots{display:none}
+/* the scenes as a strip of pressed-in buttons under the cover */
+.scene-row{display:flex;align-items:center;gap:14px;margin-top:clamp(14px,1.8vw,22px)}
+.scene-list{flex:1;min-width:0;list-style:none;margin:-10px 0 -22px;padding:10px 14px 22px;display:flex;gap:10px;overflow-x:auto;scrollbar-width:none}
+.scene-list::-webkit-scrollbar{display:none}
+/* own scrollbar: the native one is hidden, a clay groove with a raised pill sits on the right edge (mouse only) */
+.scroller::-webkit-scrollbar{display:none}
+/* page loading line: a plain 2px line in the text colour (white in dark theme, dark in light) along the top edge.
+   It creeps on its own from first paint (pure CSS), the script pulls it forward as the first-screen images arrive, then it fills and fades */
+.pl{position:fixed;z-index:60;top:0;left:0;right:0;height:2px;pointer-events:none;transition:opacity .5s var(--io) .25s}
+.pl i{position:absolute;inset:0;background:var(--ink);transform-origin:0 50%;transform:scaleX(.08);animation:plcreep 8s cubic-bezier(.1,.6,.3,1) forwards;transition:transform .45s var(--xo)}
+@keyframes plcreep{to{transform:scaleX(.85)}}
+.pl.set i{animation:none}
+.pl.done{opacity:0}
+@media (prefers-reduced-motion:reduce){ .pl i{animation:none;transform:scaleX(.5)} }
+.sbar{position:fixed;z-index:25;top:12px;bottom:12px;right:5px;width:10px;border-radius:999px;cursor:pointer;
+  box-shadow:inset 2px 2px 4px var(--lo),inset -2px -2px 4px var(--hi);opacity:.75;transition:opacity .4s var(--io),width .3s var(--xo)}
+.sbar i{position:absolute;left:1px;right:1px;top:0;height:40px;border-radius:999px;background:color-mix(in srgb,var(--ink-2) 40%,var(--bg));will-change:transform;
+  box-shadow:2px 2px 5px var(--lo),-1px -1px 3px var(--hi);transition:background-color .5s var(--io)}
+.sbar:hover,.sbar.on,.sbar.drag{opacity:1}
+.sbar.drag{cursor:grabbing}
+.sbar:hover i,.sbar.drag i{background:color-mix(in srgb,var(--ink-2) 65%,var(--bg))}
+@media (hover:none),(pointer:coarse){ .sbar{display:none} }
+.scene-list li{flex:1 1 auto}
+.scene{display:flex;align-items:center;gap:10px;width:100%;border:0;border-radius:999px;padding:7px 16px 7px 7px;background:var(--bg);cursor:pointer;text-align:left;
+  box-shadow:4px 4px 10px var(--lo),-4px -4px 10px var(--hi);transition:box-shadow .3s var(--io),background-color .5s var(--io)}
+
+.scene .th{flex:none;width:42px;height:42px;border-radius:50%;background-size:cover;background-position:center;box-shadow:2px 2px 5px var(--lo),-2px -2px 5px var(--hi)}
+.scene .t{min-width:0}
+.scene .t strong{display:block;font-weight:600;font-size:15px;white-space:nowrap}
+
+/* shots: a screenshot frame sunk into the clay; until a real shot is set it is a labelled placeholder */
+.shot{position:relative;border-radius:22px;overflow:hidden;background-color:var(--bg);background-position:center;background-size:cover;background-repeat:no-repeat;
+  box-shadow:inset 6px 6px 14px var(--lo),inset -6px -6px 14px var(--hi)}
+.shot:not(.has-img)::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 90% at 18% 0%,var(--hi),transparent 62%);opacity:.45}
+.shot-cap{position:absolute;z-index:1;right:16px;top:14px;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--ink-2);pointer-events:none}
+.shot.has-img .shot-cap{display:none}
+.shot.has-img{box-shadow:none}
+
+/* numbers strip */
+.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:clamp(12px,1.6vw,18px);margin-top:clamp(18px,2.4vw,28px)}
+.stat{padding:18px 20px;border-radius:20px}
+.stat b{display:block;font-family:var(--f-display);font-weight:600;font-size:clamp(20px,2vw,26px);letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat > span{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--ink-2)}
+
+/* pills: small pressed-in labels */
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pills span{font-family:var(--f-mono);font-size:12px;padding:7px 12px;border-radius:999px;box-shadow:inset 2px 2px 5px var(--lo),inset -2px -2px 5px var(--hi);color:var(--ink-2)}
+
+/* description: an intro line, then the features as an accordion in two columns */
+.intro{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:clamp(18px,3vw,40px);align-items:end;margin-bottom:clamp(24px,3vw,36px)}
+.big-line{font-family:var(--f-display);font-weight:600;font-size:clamp(20px,2vw,26px);line-height:1.2;letter-spacing:-.02em}
+.acc-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(14px,1.6vw,18px);align-items:start}
+.acc{display:grid;gap:clamp(14px,1.6vw,18px)}
+.acc-item{border-radius:24px;background:var(--bg);box-shadow:6px 6px 14px var(--lo),-6px -6px 14px var(--hi);transition:box-shadow .35s var(--io),background-color .5s var(--io)}
+
+.acc-btn{display:flex;align-items:center;gap:16px;width:100%;border:0;background:transparent;padding:14px 20px 14px 14px;cursor:pointer;text-align:left;border-radius:24px}
+.acc-ic{flex:none;display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--bg);box-shadow:4px 4px 9px var(--lo),-4px -4px 9px var(--hi)}
+.acc-ic svg{width:22px;height:22px;stroke:var(--ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.acc-t{flex:1;min-width:0;display:grid;gap:2px}
+.acc-t strong{font-family:var(--f-display);font-weight:600;font-size:16px;letter-spacing:-.01em}
+.acc-t span{font-size:13px;color:var(--ink-2)}
+.acc-chev{flex:none;width:18px;height:18px;stroke:var(--ink-2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .35s var(--xo)}
+.acc-item.open .acc-chev{transform:rotate(180deg)}
+/* the user asked for a smooth open: the row height eases from 0fr to 1fr, the text fades in after it */
+.acc-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--io)}
+.acc-item.open .acc-body{grid-template-rows:1fr}
+.acc-in{overflow:hidden;min-height:0}
+.acc-pad{padding:0 22px 20px 78px;font-size:15px;color:var(--ink-2);opacity:0;transform:translateY(-6px);transition:opacity .3s var(--io),transform .45s var(--xo)}
+.acc-item.open .acc-pad{opacity:1;transform:none;transition-delay:.12s}
+@keyframes accin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.acc-body ul{margin:0;padding-left:18px;display:grid;gap:6px}
+.acc-body .pills{margin-top:0}
+/* clouds: shot and text side by side, the eight types as pressed chips, three points under it */
+.split2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:clamp(20px,3vw,40px);align-items:center}
+.split2 .shot{aspect-ratio:16/9}
+.split2.rev{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}
+.split-text{display:grid;gap:16px}
+.cloud-more{justify-self:start}
+.types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.types span{padding:10px 14px;border-radius:14px;font-size:14px;font-weight:600;box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(16px,2vw,24px);margin-top:clamp(16px,2vw,24px)}
+.point{display:grid;gap:10px;align-content:start}
+/* post-processing: tabs in a pressed track, one panel at a time */
+.post-side{display:flex;flex-direction:column;gap:16px;align-self:stretch}
+.post-preview{background:#000}
+.post-image{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .4s var(--io)}
+.post-image.on{opacity:1}
+@media(prefers-reduced-motion:reduce){.post-image{transition:none}}
+.post-foot{margin-top:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;padding:6px;border-radius:22px}
+.tabs button{flex:1 1 auto;border:0;background:transparent;border-radius:16px;padding:11px 14px;cursor:pointer;font-weight:600;font-size:14px;white-space:nowrap;transition:box-shadow .3s var(--io)}
+.tabs button[aria-selected="true"]{background:var(--bg);box-shadow:4px 4px 9px var(--lo),-4px -4px 9px var(--hi)}
+.post-panels{display:grid}
+.post-panel{grid-area:1 / 1;font-size:15px;color:var(--ink-2);display:grid;gap:12px;align-content:start;opacity:0;visibility:hidden;transition:opacity .3s var(--io),visibility 0s .3s}
+.post-panel.on{opacity:1;visibility:visible;transition:opacity .35s var(--io) .05s,visibility 0s}
+.post-panel b{color:var(--ink)}
+.post-panel ul{margin:0;padding-left:18px;display:grid;gap:6px}
+.pp,.q-card{margin-top:clamp(16px,2vw,24px)}
+.h-big{font-size:clamp(20px,2vw,26px)}
+.q-card{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:clamp(20px,3vw,40px);align-items:center}
+.q-left{display:grid;gap:12px}
+.q-right{display:grid;gap:12px;grid-auto-rows:1fr;align-self:stretch}
+.pp-card{display:grid;gap:12px;align-content:start}
+.pp-card .shot{aspect-ratio:16/9;margin-bottom:6px}
+.prof-list{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 6px}
+.prof-list span{padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;box-shadow:3px 3px 7px var(--lo),-3px -3px 7px var(--hi)}
+.prof-list span.def{box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+.prof-list span.def::after{content:" — по умолчанию";font-weight:400;color:var(--ink-2)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border-radius:18px;background:var(--bg);box-shadow:4px 4px 10px var(--lo),-4px -4px 10px var(--hi)}
+.row .t{display:grid;gap:2px;min-width:0}
+.row .t strong{font-weight:600;font-size:14px}
+.row .t span{font-size:12px;color:var(--ink-2)}
+.lic{margin-top:18px}
+
+/* before / after: the top layer is clipped at the handle; an invisible range input does the dragging */
+.cmp{position:relative;aspect-ratio:16/9;width:100%;border-radius:22px;overflow:hidden;--x:50%}
+.cmp .shot{position:absolute;inset:0;border-radius:0}
+.cmp-a:not(.has-img)::after{content:"";position:absolute;inset:0;background:var(--lo);opacity:.28}
+.cmp-b{clip-path:inset(0 0 0 var(--x))}
+.cmp-line{position:absolute;z-index:2;top:0;bottom:0;left:var(--x);width:0;pointer-events:none}
+.cmp-line::before{content:"";position:absolute;top:0;bottom:0;left:-1px;width:2px;background:var(--hi);box-shadow:0 0 6px var(--lo)}
+.cmp-knob{position:absolute;top:50%;left:-24px;width:48px;height:48px;margin-top:-24px;border-radius:50%;display:grid;place-items:center;background:var(--bg);box-shadow:5px 5px 12px var(--lo),-5px -5px 12px var(--hi)}
+.cmp-knob svg{width:22px;height:22px;stroke:var(--ink-2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cmp-range{position:absolute;z-index:3;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:ew-resize;touch-action:pan-y}
+.cmp:has(.cmp-range:focus-visible) .cmp-knob{outline:2px solid var(--ink);outline-offset:4px}
+.cmp-tag{position:absolute;z-index:2;top:14px;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;padding:7px 12px;border-radius:999px;background:var(--bg);color:var(--ink-2);box-shadow:3px 3px 7px var(--lo),-3px -3px 7px var(--hi);pointer-events:none}
+.cmp-tag.l{left:14px}.cmp-tag.r{right:14px}
+.seg.cmp-scenes{grid-template-columns:repeat(2,1fr);min-width:0;width:max-content;flex:none}
+/* the whole compare block (title row + framed slider) is as wide as a 16:9 shot that still fits the screen
+   under the header and the title row, and never wider than 1200px of picture */
+#compare .wrap > *{max-width:calc(min(1200px, (100svh - 400px) * 16 / 9) + 60px);margin-inline:auto}
+.cmp-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:18px 24px;margin-bottom:clamp(28px,4vw,44px)}
+.cmp-head .head,.cmp-head .seg{margin-bottom:0}
+
+/* versions + download side by side */
+.duo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(18px,2.4vw,28px);align-items:stretch}
+.thanks{margin-top:clamp(18px,2.4vw,28px)}
+/* credits: each person is a button to their GitHub (or Discord) */
+.thanks .credits{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.credit{display:flex;align-items:center;gap:12px;height:100%;padding:12px 14px;border-radius:18px;text-decoration:none;color:var(--ink);background:var(--bg);
+  box-shadow:4px 4px 10px var(--lo),-4px -4px 10px var(--hi),inset 0 0 0 transparent,inset 0 0 0 transparent;transition:box-shadow .3s var(--io),scale .2s var(--io),translate .4s var(--xo),background-color .5s var(--io)}
+@media (hover:hover){ .credit:hover{translate:0 -2px} }
+.credit:active{scale:.97;box-shadow:0 0 0 transparent,0 0 0 transparent,inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+.cr-ic{flex:none;width:22px;height:22px;fill:var(--ink-2)}
+.cr-t{display:grid;gap:2px;min-width:0}
+.cr-t strong{font-weight:600;font-size:14px}
+.cr-t span{font-size:12px;color:var(--ink-2)}
+
+/* versions */
+.seg{display:inline-grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:8px;border-radius:999px;margin-bottom:24px;min-width:min(100%,420px)}
+.seg button{border:0;background:transparent;border-radius:999px;padding:12px 18px;cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:16px;font-variant-numeric:tabular-nums;transition:box-shadow .25s}
+.seg button small{display:block;white-space:nowrap;font-family:var(--f-mono);font-weight:400;font-size:10px;letter-spacing:.06em;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--bg);box-shadow:5px 5px 12px var(--lo),-5px -5px 12px var(--hi)}
+.seg button:disabled{cursor:default;opacity:.65}
+.log{list-style:none;margin:18px 0 0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.log li{display:flex;gap:12px;align-items:baseline;font-size:15px}
+/* "Что нового" card: the full-changelog button sits at its bottom */
+#versions{display:flex;flex-direction:column}
+#versions .log{margin-bottom:26px}
+.version-panels{display:grid;grid-template-columns:minmax(0,1fr)}
+.version-panel{grid-area:1/1;min-width:0;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .28s var(--io),visibility .28s}
+.version-panel.active{opacity:1;visibility:visible;pointer-events:auto}
+@media(prefers-reduced-motion:reduce){.version-panel{transition:none}}
+.full-log{margin-top:auto;align-self:flex-start}
+.full-log svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:translate .3s var(--xo)}
+@media (hover:hover){ .full-log:hover svg{translate:3px 0} }
+.log li::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;transform:translateY(-1px);box-shadow:inset 2px 2px 3px var(--lo),inset -1px -1px 3px var(--hi)}
+
+/* get */
+.big{font-family:var(--f-display);font-weight:800;font-size:clamp(34px,6vw,76px);line-height:1;letter-spacing:-.04em;margin:0 0 24px;color:var(--title);text-shadow:5px 5px 10px var(--lo),-4px -4px 9px var(--hi)}
+.req{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:26px}
+.req span{font-family:var(--f-mono);font-size:12px;padding:8px 12px;border-radius:999px;box-shadow:inset 3px 3px 6px var(--lo),inset -3px -3px 6px var(--hi)}
+.credits{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.credits li{display:block}
+/* footer: brand + three link columns on a raised card, the legal lines below a sunk divider */
+.foot{margin-top:clamp(40px,6vw,72px);display:grid;gap:26px}
+.ft-top{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));gap:28px}
+.ft-brand{display:grid;align-content:start;justify-items:start;gap:12px}
+.ft-brand p{font-size:14px;color:var(--ink-2);max-width:34ch}
+.ft-up{padding:10px 16px;font-size:12px}
+.ft-up svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ft-col{display:grid;align-content:start;gap:4px}
+.ft-col h4{margin:0 0 6px;font-family:var(--f-display);font-weight:600;font-size:14px}
+.ft-col a{justify-self:start;padding:5px 0;font-size:14px;color:var(--ink-2);text-decoration:none;transition:color .25s var(--io),translate .3s var(--xo)}
+@media (hover:hover){ .ft-col a:hover{color:var(--ink);translate:3px 0} }
+.ft-bot{display:grid;gap:4px;padding:14px 18px;border-radius:18px;font-family:var(--f-mono);font-size:11px;letter-spacing:.03em;line-height:1.6;color:var(--ink-2);
+  box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+
+/* theme switch: circular reveal from the toggle */
+.tvo{position:fixed;inset:0;z-index:9999;pointer-events:none;overflow:hidden;background:var(--bg);color:var(--ink);transform:translateZ(0);will-change:clip-path}
+.tvo *,.tvo *::before,.tvo *::after{animation:none!important;transition:none!important}
+.vt *,.vt *::before,.vt *::after{transition:none!important}
+.vt .tk,.vt .tk *{transition:transform .55s var(--xo),opacity .3s var(--io)!important}
+/* View Transitions theme switch: no default cross-fade, the new snapshot is revealed by a clip-path circle */
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+::view-transition-new(root){z-index:2}
+
+/* header fade + progress */
+.topfade{position:fixed;z-index:19;top:0;left:0;right:0;height:calc(env(safe-area-inset-top,0px) + 104px);background:linear-gradient(var(--bg) 62%,transparent);pointer-events:none;transition:background .5s var(--io)}
+/* scroll progress under the top bar (phones and narrow screens): a plain line in the text colour, black in light theme, white in dark */
+.progress{position:absolute;left:24px;right:24px;bottom:2px;height:2px;border-radius:2px;background:var(--ink);transform-origin:0 50%;transform:scaleX(0);opacity:.85}
+
+/* smooth surfaces */
+.card,.btn,.stat,.inset,.raise-sm,.switch,.seg button,.pills span,.req span,.shot,.cmp-knob,.cmp-tag{transition:background-color .5s var(--io),box-shadow .5s var(--io),color .5s var(--io),translate .5s var(--io)}
+/* buttons: one eased lift on hover, a soft press on click */
+/* hover lift through a variable (one translate) */
+.btn{translate:0 var(--lift,0px);transition:background-color .5s var(--io),box-shadow .3s var(--io),color .5s var(--io),translate .4s var(--xo),scale .2s var(--io)}
+@media (hover:hover){
+  .btn:hover{--lift:-2px}
+}
+.log li{animation:li .6s var(--io) both;animation-delay:var(--d,0ms)}
+@keyframes li{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+
+/* lamps: a small warm-lit ball with a soft, modest glow; the surface around it stays plain */
+:root,.tv-light{--gh-fill:#24272d;--gh-ink:#ffffff;--lamp-glow:rgba(255,178,100,.5);--mc-f:var(--ink);--mc-1:#0000aa}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--gh-fill:#ffffff;--gh-ink:#1c1f25;--lamp-glow:rgba(255,170,90,.38);--mc-f:#ffffff;--mc-1:#6575ff}}
+:root[data-theme="dark"],.tv-dark{--gh-fill:#ffffff;--gh-ink:#1c1f25;--lamp-glow:rgba(255,170,90,.38);--mc-f:#ffffff;--mc-1:#6575ff}
+.glowdot:not(.off),.switch[aria-checked="true"]::after{
+  background:radial-gradient(circle at 46% 40%,#fff6e2 0 16%,#ffe2ac 48%,#ffc67c 84%,#eba25a 100%);
+  box-shadow:0 0 4px 1px rgba(255,222,170,.85),0 0 14px 4px var(--lamp-glow)}
+.glowdot:not(.off){width:12px;height:12px}
+
+/* micro-interactions */
+.btn:active{scale:.97}
+.switch:active::after{scale:.86}
+/* theme switch knob: a black sun in light theme, a white crescent moon in dark. While the knob slides the
+   rays fold away and a bite slides into the disc; everything moves by transform/opacity, same timing as the slide */
+.theme-sw::after{display:none}
+.tk{position:absolute;top:4px;left:4px;width:24px;height:24px;color:var(--ink);transition:transform .55s var(--xo),color .5s var(--io)}
+.tk svg{display:block;width:100%;height:100%;overflow:visible}
+.tk-core{fill:currentColor;transform-box:fill-box;transform-origin:center;transform:scale(.56);transition:transform .55s var(--xo)}
+.tk-bite{transform-box:fill-box;transform-origin:center;transform:translate(9px,-9px) scale(.4);transition:transform .55s var(--xo)}
+.tk-rays{stroke:currentColor;stroke-width:2;stroke-linecap:round;transform-box:view-box;transform-origin:12px 12px;transition:transform .55s var(--xo),opacity .3s var(--io)}
+.theme-sw[aria-checked="true"] .tk{transform:translateX(24px)}
+.theme-sw[aria-checked="true"] .tk-core{transform:scale(1)}
+.theme-sw[aria-checked="true"] .tk-bite{transform:none}
+.theme-sw[aria-checked="true"] .tk-rays{transform:rotate(-90deg) scale(.4);opacity:0}
+.theme-sw:active .tk{scale:.9}
+/* the reveal copy freezes every transition except this knob, which has to fly and morph inside the circle */
+.tvo .tk,.tvo .tk *{transition:transform .55s var(--xo),opacity .3s var(--io),color .5s var(--io)!important}
+.switch::after{transition:transform .45s var(--xo),background .3s,box-shadow .3s,scale .2s var(--io)}
+.title .o,.title .s{transform-origin:0 100%}
+.vpill,.brand{transition:transform .5s var(--xo)}
+@media (hover:hover){ .vpill:hover{transform:translateY(-2px)} }
+
+/* motion: surfaces press out of the clay as they enter */
+/* the cover, title and numbers used to fade/slide in on load (.ld); removed at the owner's request: the first screen is shown at once */
+.ld{animation:none}
+@media (prefers-reduced-motion: reduce){
+  .scroller{scroll-behavior:auto}
+  .ld,.log li{animation:none}
+  .tk,.tk *{transition:none!important}
+  .acc-body,.acc-pad{transition:none}
+  .pills span,.req span,.credits li{transition:none}
+  .dlm-back,.dlm-card,.sel-list,.sel-list li,.sel-list li.sel-ind,.sel-btn svg,.prev{transition:none}
+}
+
+/* download: store buttons in their brand colours, and a site download dialog */
+.dlbtns{display:grid;gap:14px;max-width:420px}
+.dlbtns .btn{justify-content:center;padding:17px 24px}
+.btn.mr{background:#1bd96a;color:#0b2416}
+.btn.cf{background:#f16436;color:#ffffff}
+/* big translucent service logo on the left of each download button, cut off by the bottom edge.
+   isolation + z-index:-1 keeps it under the label but above the button's own fill */
+.dlbtns .btn{position:relative;overflow:hidden;isolation:isolate}
+.bmark{position:absolute;z-index:-1;left:9%;top:14px;width:60px;height:60px;fill:currentColor;opacity:.2;pointer-events:none}
+.bm-cf{width:72px;height:72px;top:6px}
+.bm-dl{top:6px}
+.subbtns{margin-top:18px}
+/* the three link buttons together are exactly as wide as one download button */
+.subbtns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;max-width:420px}
+.subbtns .btn{justify-content:center;padding-inline:10px}
+.dlm{position:fixed;inset:0;z-index:40;display:grid;place-items:safe center;padding:var(--g);overflow-y:auto;scrollbar-width:none}
+.dlm::-webkit-scrollbar{display:none}
+.dlm-back{position:fixed;inset:0;background:var(--scrim);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);opacity:0;transition:opacity .45s var(--xo)}
+.dlm.open .dlm-back{opacity:1}
+.dlm-card{position:relative;width:min(100%,560px);display:grid;gap:18px;opacity:0;transform:translateY(18px) scale(.96);transition:opacity .45s var(--xo),transform .6s var(--xo)}
+.dlm.open .dlm-card{opacity:1;transform:none}
+.dlm .dlm-card{box-shadow:none}
+.dlm-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.dlm-x{flex:none;display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:var(--bg);box-shadow:4px 4px 9px var(--lo),-4px -4px 9px var(--hi);cursor:pointer;font-size:20px;line-height:1;color:var(--ink-2)}
+
+.pick{position:relative;display:grid;gap:18px;min-width:0}
+.sel{position:static}
+.sel-btn{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;border:0;border-radius:999px;padding:14px 20px;cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:16px;font-variant-numeric:tabular-nums}
+.sel-btn > span{display:flex;align-items:center;gap:10px;min-width:0}
+.sel-btn small{white-space:nowrap;line-height:1;font-family:var(--f-mono);font-weight:400;font-size:11px;letter-spacing:.04em;color:var(--ink-2)}
+.sel-btn svg{width:16px;height:16px;stroke:var(--ink-2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .45s var(--xo)}
+.sel.open .sel-btn svg{transform:rotate(180deg)}
+.sel-list{position:absolute;z-index:2;left:0;right:0;top:0;bottom:0;margin:0;padding:8px;list-style:none;border-radius:22px;background:var(--bg);box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi);
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-content:center;gap:6px;overflow-y:auto;scrollbar-width:none;opacity:0;transform:scale(.97);pointer-events:none;transition:opacity .55s var(--xo),transform .6s var(--xo)}
+.sel.open .sel-list{opacity:1;transform:none;pointer-events:auto;transition-duration:.3s,.45s}
+.sel-list li{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:8px 4px;min-height:44px;border-radius:999px;cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:15px;font-variant-numeric:tabular-nums;
+  opacity:0;transform:scale(.9);transition:opacity .3s var(--xo),transform .4s var(--xo),background-color .25s,color .25s;transition-delay:0ms}
+.sel.open .sel-list li{opacity:1;transform:none;transition-delay:calc(var(--k,0) * 22ms),calc(var(--k,0) * 22ms),0ms,0ms}
+.sel-list li{position:relative;z-index:1}
+.sel-list li:hover,.sel-list:focus-visible li.hl{box-shadow:inset 1px 1px 3px var(--lo),inset -1px -1px 3px var(--hi)}
+.sel-list li[aria-selected="true"]{box-shadow:none}
+.sel-list li.sel-ind{position:absolute;z-index:0;left:0;top:0;min-height:0;padding:0;pointer-events:none;opacity:1;background:var(--bg);
+  box-shadow:inset 4px 4px 9px var(--lo),inset -4px -4px 9px var(--hi);transition:transform .45s var(--io),background-color .5s var(--io),box-shadow .5s var(--io)}
+.sel.open .sel-list li.sel-ind{transition-delay:0ms}
+.sel-list.snap li.sel-ind{transition:none}
+.prev{position:relative;display:flex;align-items:center;width:100%;min-width:0;border-radius:22px;overflow:hidden;min-height:132px;background:var(--bg);box-shadow:inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi);transition:opacity .55s var(--xo),transform .6s var(--xo),background-color .5s var(--io)}
+.pick.listing .prev{opacity:0;transform:scale(.97);pointer-events:none}
+.prev-img{position:absolute;inset:0;background-size:cover;background-position:center;transition:opacity .5s var(--xo)}
+.prev-shade{display:none;position:absolute;inset:0;background:linear-gradient(to top,rgba(8,9,12,.82),rgba(8,9,12,.15) 55%,transparent)}
+.prev-info{position:relative;width:100%;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px}
+.prev-text{display:grid;gap:6px;min-width:0}
+.prev-downloads{display:inline-flex;align-items:center;gap:6px;justify-self:start;padding:4px 9px;margin-top:2px;border-radius:999px;font-family:var(--f-mono);font-size:10px;color:var(--ink-2);background:var(--bg);box-shadow:2px 2px 5px var(--lo),-2px -2px 5px var(--hi)}
+.prev-downloads svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.prev-downloads b{font-weight:400;color:var(--ink);font-variant-numeric:tabular-nums}
+@media(min-width:761px){
+  .prev{min-height:0}
+  .prev-info{padding:16px 18px}
+  .prev-text{gap:5px}
+  .prev-downloads{margin-top:2px}
+}
+.mcname{font-family:var(--f-display);font-size:clamp(17px,4.4vw,24px);letter-spacing:-.01em;line-height:1.15;white-space:nowrap}
+.mcname .slot{position:relative;display:inline-block;vertical-align:bottom}
+.mcname .g{display:inline-block}
+.mcname .g.out{position:absolute;left:0;top:0}
+.mcname .mb{filter:url(#vblur)}
+.prev-meta{font-family:var(--f-mono);font-size:11px;letter-spacing:.05em;color:var(--ink-2)}
+.btn.prev-dl{flex:none;position:relative;isolation:isolate;overflow:hidden;display:grid;place-items:center;gap:0;background:var(--solid);color:var(--solid-ink);--dl-ok:#13b653}
+.dl-ready,.dl-success{grid-area:1/1;white-space:nowrap;pointer-events:none}
+.dl-ready{position:relative;z-index:0}
+.dl-success{position:relative;z-index:3;color:#fff;opacity:0;transform:translateX(-150%)}
+.dl-paint{position:absolute;inset:0;pointer-events:none}
+.dl-paint{z-index:1}
+.dl-fill{position:absolute;inset:0 -20%;background:var(--dl-ok);transform:translateX(-100%) skewX(-18deg)}
+.btn.prev-dl.dl-running{cursor:wait;translate:0;scale:1}
+.dl-running .dl-ready{opacity:0}
+.dl-running .dl-fill{transform:translateX(0) skewX(-18deg)}
+.dl-running .dl-success{opacity:1;transform:none}
+.prev .mcname{--mc-1:#6575ff}
+.prev.has-img .prev-shade{display:block}
+.prev.has-img .prev-meta{color:#c9ced8}
+.prev.has-img .btn.prev-dl{background:#ffffff;color:#14161b;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+
+
+/* GitHub and Discord fill with their colour from the bottom up on hover, and drain back down */
+.btn.gh{--brand:var(--gh-fill);--brand-ink:var(--gh-ink)}
+.btn.dc{--brand:#5865f2;--brand-ink:#ffffff}
+.btn.yt{--brand:#ff0033;--brand-ink:#ffffff}
+.btn.gh,.btn.dc,.btn.yt{position:relative;overflow:hidden;isolation:isolate;transition:background-color .5s var(--io),box-shadow .3s var(--io),color .125s var(--io),translate .4s var(--xo),scale .2s var(--io)}
+.btn.gh::before,.btn.dc::before,.btn.yt::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;background:var(--brand);transform:scaleY(0);transform-origin:50% 100%;transition:transform .125s var(--io)}
+.btn.gh:hover::before,.btn.dc:hover::before,.btn.yt:hover::before,.btn.gh:focus-visible::before,.btn.dc:focus-visible::before,.btn.yt:focus-visible::before{transform:none}
+.btn.gh:hover,.btn.dc:hover,.btn.yt:hover,.btn.gh:focus-visible,.btn.dc:focus-visible,.btn.yt:focus-visible{color:var(--brand-ink)}
+
+/* pressing: every raised control sinks smoothly. Raised and pressed states share four shadow layers
+   (two outer, two inset) so the shadow interpolates instead of snapping */
+.btn,.dlm-x{box-shadow:5px 5px 12px var(--lo),-5px -5px 12px var(--hi),inset 0 0 0 transparent,inset 0 0 0 transparent}
+.rbtn,.scene{box-shadow:4px 4px 10px var(--lo),-4px -4px 10px var(--hi),inset 0 0 0 transparent,inset 0 0 0 transparent;transition:box-shadow .3s var(--io),background-color .5s var(--io),scale .2s var(--io)}
+.dlm-x{transition:box-shadow .3s var(--io),scale .2s var(--io)}
+.btn:active,.rbtn:active,.dlm-x:active,.scene:active,.scene[aria-selected="true"]{box-shadow:0 0 0 transparent,0 0 0 transparent,inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
+.rbtn:active,.dlm-x:active,.scene:active{scale:.97}
+.acc-item{box-shadow:6px 6px 14px var(--lo),-6px -6px 14px var(--hi),inset 0 0 0 transparent,inset 0 0 0 transparent}
+.acc-item.open{box-shadow:0 0 0 transparent,0 0 0 transparent,inset 4px 4px 10px var(--lo),inset -4px -4px 10px var(--hi)}
+/* coloured buttons don't sink into the clay: they just press down a little */
+.btn.solid,.btn.mr,.btn.cf,.btn.prev-dl{box-shadow:5px 5px 12px var(--lo),-5px -5px 12px var(--hi)}
+.btn.solid:active,.btn.mr:active,.btn.cf:active,.btn.prev-dl:active{box-shadow:2px 2px 5px var(--lo),-2px -2px 5px var(--hi)}
+
+/* buttons lying on the cover photo: the clay's white highlight reads as a glow on a dark picture,
+   so they cast a plain dark shadow instead (same four layers, so the press still eases) */
+.screen .btn,.screen .btn.solid{box-shadow:0 6px 16px rgba(0,0,0,.35),0 0 0 transparent,inset 0 0 0 transparent,inset 0 0 0 transparent}
+.screen .btn:active,.screen .btn.solid:active{box-shadow:0 2px 6px rgba(0,0,0,.3),0 0 0 transparent,inset 2px 2px 5px rgba(0,0,0,.18),inset 0 0 0 transparent}
+
+/* language picker: a raised pill (globe + code) with a small clay menu; on desktop it sits in the sidebar above the theme row */
+.langrow{display:flex;align-items:center;gap:8px;margin-left:auto}
+.langrow + .theme{margin-left:0}
+.lang-l{display:none;font-size:13px;color:var(--ink-2)}
+.vp-ic{display:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@media (min-width:1100px) and (min-height:520px){
+  .langrow{margin:auto 0 0;justify-content:space-between;padding:10px 12px}
+  .langrow + .theme{margin-top:0}
+  .lang-l{display:inline}
+  .bar .lang-menu{top:auto;bottom:calc(100% + 10px);transform-origin:bottom right}
+}
+/* layout swap on resize (class set by script for a moment): the new bar slides in */
+@keyframes barDrop{from{transform:translateY(-140%);opacity:0}}
+@keyframes barSide{from{transform:translateX(-120%);opacity:0}}
+.bar-swap .bar{animation:barDrop .55s var(--xo)}
+@media (min-width:1100px) and (min-height:520px){ .bar-swap .bar{animation:barSide .55s var(--xo)} }
+@media (prefers-reduced-motion:reduce){ .bar-swap .bar{animation:none} }
+/* short windows: the sidebar tightens step by step instead of running off the bottom.
+   The section list may scroll inside itself as a last resort; the bottom controls always stay visible */
+@media (min-width:1100px) and (min-height:520px){
+  .bar .nav:not(.nav-x){flex:0 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none}
+  .bar .nav:not(.nav-x)::-webkit-scrollbar{display:none}
+}
+@media (min-width:1100px) and (min-height:520px) and (max-height:800px){
+  .bar{padding:16px 12px 12px;gap:4px}
+  .brand{padding:0 12px 10px}
+  .nav{gap:2px}
+  .nav a{padding:9px 14px}
+  .nav-x{margin-top:6px;padding-top:8px}
+  .langrow,.theme{padding:6px 12px}
+  .vpill{padding:11px;margin-top:4px}
+}
+@media (min-width:1100px) and (min-height:520px) and (max-height:640px){
+  .brand{font-size:15px;padding-bottom:6px}
+  .brand .logo{width:24px;height:24px;border-radius:7px}
+  .nav a{padding:6px 14px;font-size:12px}
+  .nav a svg{width:16px;height:16px}
+  .langrow,.theme{padding:3px 12px}
+  .vpill{padding:9px;font-size:12px}
+}
+
+/* below the sidebar width the cover is narrower: the scene caption leaves the bottom row for the top-right corner,
+   otherwise it wraps under the title and pushes the title and buttons up the shot */
+@media (max-width:1100px) and (min-width:761px), (min-width:761px) and (max-height:519.98px){
+  .screen .player{position:absolute;top:22px;right:22px;margin:0}
+  .screen .now{text-align:right}
+}
+/* the old moon glyph beside the switch: the knob itself is a sun / moon now */
+.theme .ico{display:none}
+@media (max-width:1100px), (max-height:519.98px){
+  .nav{display:none}
+  .stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .thanks .credits{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:900px){
+  .duo{grid-template-columns:minmax(0,1fr)}
+  .trio{grid-template-columns:minmax(0,1fr)}
+  .split2,.split2.rev{grid-template-columns:minmax(0,1fr)}
+  .split2.rev .shot{order:-1}
+}
+@media (max-width:760px){
+  .card{box-shadow:7px 7px 14px var(--lo),-7px -7px 14px var(--hi)}
+  .prev{aspect-ratio:auto;min-height:0}
+  .prev-info{position:relative;flex-wrap:wrap}
+  .btn.prev-dl{width:100%;justify-content:center;padding:12px 20px}
+  .nav{display:none}
+  .theme{margin-left:auto}
+  .theme .ico{display:none}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .screen{min-height:0;padding:22px 20px}
+  .scene-list{display:flex;overflow-x:auto;scrollbar-width:none}
+  .scene{flex:none;width:auto}
+  .intro,.acc-cols,.split2,.split2.rev,.trio{grid-template-columns:minmax(0,1fr)}
+  .split2.rev .shot{order:-1}
+  .q-card,.post-foot{grid-template-columns:minmax(0,1fr)}
+  .acc-pad{padding:0 18px 18px 18px}
+  .thanks .credits{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+/* ================= phone (<= 760px): its own compact layout; the desktop rules above are untouched =================
+   fewer words, smaller type and spacing, secondary descriptions hidden (details stay one tap away) */
+@media (max-width:760px){
+  body{font-size:15px}
+  section{padding-block:26px}
+  .card{padding:16px;border-radius:22px}
+  h2{font-size:24px;line-height:1.12}
+  .head{margin-bottom:14px;gap:6px}
+  .head p{font-size:14px}
+
+  /* top bar */
+  .bar{padding:6px 6px 6px 16px;gap:10px}
+  .brand{font-size:14px;gap:8px}
+  .brand .logo{width:24px;height:24px;border-radius:7px}
+  /* the logo made the top bar wider than a phone: the pill drops its version number, gaps tighten */
+  .bar{gap:8px}
+  .vp-v{display:none}
+  .vpill{padding:9px 12px;font-size:11px}
+  /* phone bar: logo + name, language (globe only), theme, and the download pill as an icon */
+  .lang-cur{display:none}
+  .lang-btn{padding:9px}
+  .vp-t{display:none}
+  .vpill{display:grid;place-items:center;width:38px;height:38px;padding:0}
+  .vp-ic{display:block}
+  .topfade{height:calc(env(safe-area-inset-top,0px) + 70px)}
+
+  /* cover: title and two buttons on the shot, the scene name as a chip in its corner */
+  .hero{padding-top:calc(env(safe-area-inset-top,0px) + 74px)}
+  .screen{min-height:0;aspect-ratio:4/5;padding:18px;border-radius:22px;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:0}
+  .title{font-size:46px;margin-bottom:14px}
+  .tag,.lead{display:none}
+  .btns{gap:10px}
+  .screen .btn{padding:11px 16px;font-size:12px}
+  .player{position:absolute;top:14px;right:14px;margin:0}
+  .now{padding:6px 12px;border-radius:999px;background:rgba(8,9,12,.45);max-width:none;text-align:left}
+  .now b{font-size:12px;font-family:var(--f-body)}
+  .now span{display:none}
+  .scene-row{margin-top:10px;gap:0}
+  .scene-row .rbtn{display:none}
+  .scene-list{margin:-8px 0 -16px;padding:8px 10px 16px;gap:8px}
+  .scene{padding:5px 12px 5px 5px;gap:8px}
+  .scene .th{width:30px;height:30px}
+  .scene .t strong{font-size:13px}
+
+  /* numbers: three small ones per row */
+  .stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+  .stat{padding:9px 10px;border-radius:14px;line-height:1.3}
+  .stat b{font-size:17px}
+  .stat > span{display:block;font-size:9px;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  /* features: titles only, the detail opens on tap */
+  .intro{margin-bottom:14px;gap:6px}
+  .intro h2{font-size:22px}
+  .big-line,.stat .long,.split-text .more{display:none}
+  .acc-cols,.acc{gap:10px}
+  .acc-item{border-radius:18px}
+  .acc-btn{padding:10px 14px 10px 10px;gap:12px;border-radius:18px}
+  .acc-ic{width:36px;height:36px}
+  .acc-ic svg{width:18px;height:18px}
+  .acc-t strong{font-size:14px}
+  .acc-t span{display:none}
+  .acc-pad{padding:0 14px 14px;font-size:14px}
+
+  /* clouds */
+  .split2{gap:14px}
+  .split-text{gap:10px}
+  .split-text h2{font-size:22px}
+  .split-text p{font-size:14px}
+  .types{gap:6px}
+  .types span{padding:7px 10px;font-size:12px;border-radius:12px}
+  .trio{display:none}
+
+  /* post-processing */
+  #post .head p,.post-foot,.pp .split-text p,.q-right,.q-left > p{display:none}
+  .tabs{gap:4px;padding:4px;border-radius:18px}
+  .tabs button{padding:8px 10px;font-size:12px;border-radius:14px}
+  .post-panel:not(.on){display:none}
+  .post-panel > p,.post-panel > ul{display:none}
+  .post-side{gap:12px}
+  .h-big{font-size:18px}
+  .q-card{gap:0}
+  .prof-list{gap:6px}
+  .prof-list span{padding:6px 10px;font-size:12px}
+
+  /* compare */
+  #compare .head p{display:none}
+  .cmp-head{gap:10px;margin-bottom:14px}
+  .seg.cmp-scenes{padding:5px;gap:4px}
+  .seg.cmp-scenes button{padding:8px 14px;font-size:14px}
+  .cmp-tag{font-size:10px;padding:5px 9px;top:8px}
+  .cmp-tag.l{left:8px}.cmp-tag.r{right:8px}
+  .cmp-knob{width:38px;height:38px;left:-19px;margin-top:-19px}
+
+  /* versions + download */
+  .sel-list{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:6px}
+  .sel-list li{flex:0 0 calc(25% - 6px)}
+  .seg{width:100%;min-width:0;margin-bottom:14px;padding:5px;gap:4px}
+  .seg button{padding:8px 10px;font-size:14px}
+  .log{gap:8px}
+  .log li{font-size:14px}
+  .big{font-size:30px;margin-bottom:14px}
+  .req{gap:6px;margin-bottom:14px}
+  .req span{font-size:11px;padding:6px 10px}
+  .dlbtns{gap:10px}
+  .dlbtns .btn{padding:13px 18px}
+  .subbtns{margin-top:12px}
+  .subbtns{gap:10px}
+  .subbtns .btn{padding:13px 6px}
+
+  /* credits: two per row, icon and name only */
+  .thanks .credits{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .credit{padding:9px 12px;gap:8px;border-radius:14px}
+  .cr-ic{width:18px;height:18px}
+  .cr-t span{display:none}
+  .cr-t strong{font-size:13px}
+  .lic{font-size:12px;margin-top:12px}
+  .foot{gap:18px;margin-top:20px}
+  .ft-top{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 14px}
+  .ft-brand{grid-column:1 / -1}
+  .ft-brand p{font-size:13px}
+  .ft-col a{font-size:13px;padding:4px 0}
+  .ft-bot{font-size:10px;padding:12px 14px}
+}
+/* easter egg below the footer (overscroll-egg.js): a grass block waiting under the bottom edge */
+.egg{position:fixed;left:50%;bottom:0;z-index:0;width:min(140px,29vw);height:auto;pointer-events:none;opacity:0;will-change:transform,opacity;
+  filter:drop-shadow(0 18px 24px rgba(0,0,0,.35))}
+#sc > main{position:relative;z-index:1}
+</style>
+</head>
+<body>
+<div class="pl" id="pl" aria-hidden="true"><i></i></div>
+
+
+<div class="topfade" aria-hidden="true"></div>
+<header class="bar">
+  <a class="brand" href="#top"><img class="logo" src="shots/logo.webp" width="28" height="28" alt=""><span class="bn"><span class="b1">Better</span> <span class="b2">Voxels</span></span></a>
+  <nav class="nav" aria-label="Разделы">
+    <a href="#top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span>Обзор</span></a>
+    <a href="#about"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Возможности</span></a>
+    <a href="#clouds"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18z"/></svg><span>Облака</span></a>
+    <a href="#post"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="14" height="12" rx="2"/><path d="M17 10l4-2v8l-4-2"/></svg><span>Постобработка</span></a>
+    <a href="#compare"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M12 5v14"/></svg><span>Сравнение</span></a>
+    <a href="#get"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg><span>Скачать</span></a>
+  </nav>
+  <nav class="nav nav-x" aria-label="Страницы">
+    <a href="changelog.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h4"/></svg><span>Ченжлог</span></a>
+    <a href="technologies.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5h5.5A3.5 3.5 0 0 1 12 9v11a2.5 2.5 0 0 0-2.5-2.5H3z"/><path d="M21 5.5h-5.5A3.5 3.5 0 0 0 12 9v11a2.5 2.5 0 0 1 2.5-2.5H21z"/></svg><span>Технологии</span></a>
+  </nav>
+  <div class="langrow"><span class="lang-l">Язык</span><div data-langsel></div></div>
+  <div class="theme"><span class="ico" aria-hidden="true">☾</span><span class="theme-l">Тёмная тема</span><button class="switch theme-sw" id="theme" role="switch" aria-checked="false" aria-label="Тёмная тема"><span class="tk" aria-hidden="true"><svg viewBox="0 0 24 24"><mask id="tkm"><rect width="24" height="24" fill="#fff"/><circle class="tk-bite" cx="17" cy="7" r="7.5" fill="#000"/></mask><circle class="tk-core" cx="12" cy="12" r="8.5" mask="url(#tkm)"/><g class="tk-rays"><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(0 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(45 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(90 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(135 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(180 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(225 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(270 12 12)"/><line x1="12" y1="2.2" x2="12" y2="4.4" transform="rotate(315 12 12)"/></g></svg></span></button></div>
+  <a class="vpill" href="#get" aria-label="Скачать 1.8"><svg class="vp-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="vp-t">Скачать</span><span class="vp-v"> 1.8</span></a>
+  <span class="progress" id="prog" aria-hidden="true"></span>
+</header>
+
+<div class="sbar" id="sbar" aria-hidden="true"><i id="sbThumb"></i></div>
+<div class="scroller" id="sc">
+<main>
+  <section class="hero" id="top">
+    <div class="wrap">
+      <div class="screen ld" id="screen" style="--i:0">
+        <span class="layer on" style="background-image:url('shots/cover.webp')"></span><span class="layer"></span>
+        <div class="hero-copy">
+          <h1 class="title"><span class="o ld" style="--i:1">Bet<span class="tt">t</span>er</span><span class="s ld" style="--i:2">Voxels</span></h1>
+          <div class="ld" style="--i:3">
+            <p class="lead">Шейдер для Minecraft на основе Rethinking Voxels и Complementary: освещение с трассировкой путей, объёмные облака и вода с рябью.</p>
+            <div class="btns">
+              <a class="btn solid" href="#get">Скачать</a>
+              <a class="btn" href="#about">Что внутри</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="scene-row">
+        <button class="rbtn" type="button" id="scPrev" aria-label="Предыдущая сцена"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <ul class="scene-list" role="listbox" aria-label="Сцены">
+        <li><button class="scene" type="button" role="option" aria-selected="true" data-k="0"><span class="th" style="background-image:url('shots/th/cover.webp')"></span><span class="t"><strong>Лес</strong></span></button></li>
+        <li><button class="scene" type="button" role="option" aria-selected="false" data-k="1"><span class="th" style="background-image:url('shots/th/clouds.webp')"></span><span class="t"><strong>Облака</strong></span></button></li>
+        <li><button class="scene" type="button" role="option" aria-selected="false" data-k="2"><span class="th" style="background-image:url('shots/th/water.webp')"></span><span class="t"><strong>Вода</strong></span></button></li>
+        <li><button class="scene" type="button" role="option" aria-selected="false" data-k="3"><span class="th" style="background-image:url('shots/th/light.webp')"></span><span class="t"><strong>Свет</strong></span></button></li>
+        <li><button class="scene" type="button" role="option" aria-selected="false" data-k="4"><span class="th" style="background-image:url('shots/th/storm.webp')"></span><span class="t"><strong>Гроза</strong></span></button></li>
+        <li><button class="scene" type="button" role="option" aria-selected="false" data-k="5"><span class="th" style="background-image:url('shots/th/sunset.webp')"></span><span class="t"><strong>Закат</strong></span></button></li>
+        <li><button class="scene" type="button" role="option" aria-selected="false" data-k="6"><span class="th" style="background-image:url('shots/th/distance.webp')"></span><span class="t"><strong>Дальность</strong></span></button></li>
+        <li><button class="scene" type="button" role="option" aria-selected="false" data-k="7"><span class="th" style="background-image:url('shots/th/atmosphere.webp')"></span><span class="t"><strong>Туман</strong></span></button></li>
+      </ul>
+        <button class="rbtn" type="button" id="scNext" aria-label="Следующая сцена"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="stats ld" style="--i:4">
+<!--STATS-->        <div class="stat inset"><b>1.8</b><span>Версия</span></div>
+        <div class="stat inset"><b id="dl">68,8K</b><span>Загрузок</span></div>
+        <div class="stat inset"><b><span data-count="1700">1 700</span>+</b><span>Настроек</span></div>
+        <div class="stat inset"><b><span data-count="400">400</span></b><span>Переключателей</span></div>
+        <div class="stat inset"><b>9</b><span>Профилей<span class="long"> качества</span></span></div>
+        <div class="stat inset"><b>Iris</b><span>1.18.2 – 26.3</span></div>
+<!--/STATS-->
+      </div>
+    </div>
+  </section>
+
+  <section id="about">
+    <div class="wrap">
+      <div class="intro">
+        <h2>Все легендарные функции, которые хотелось видеть в шейдере</h2>
+        <p class="big-line muted">Собраны вместе, оптимизированы и доведены до ума.</p>
+      </div>
+      <div class="acc-cols">
+        <div class="acc">
+          <div class="acc-item">
+            <button class="acc-btn" type="button" aria-expanded="false" aria-controls="acc0"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg></span><span class="acc-t"><strong>Воксельное глобальное освещение</strong><span>Свет с трассировкой путей</span></span><svg class="acc-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-body" id="acc0"><div class="acc-in"><div class="acc-pad"><p>Свет отскакивает от поверхностей и окрашивается их цветом. Трассировка путей настроена так, чтобы работать на Iris.</p></div></div></div>
+          </div>
+          <div class="acc-item">
+            <button class="acc-btn" type="button" aria-expanded="false" aria-controls="acc1"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18z"/></svg></span><span class="acc-t"><strong>Облака Nubis Extended</strong><span>Своя технология облаков, бета</span></span><svg class="acc-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-body" id="acc1" inert><div class="acc-in"><div class="acc-pad"><p>Облака на основе Nubis 2017, Nubis Cubed и других статей, с физикой, которая решает, где облаку появиться.</p></div></div></div>
+          </div>
+          <div class="acc-item">
+            <button class="acc-btn" type="button" aria-expanded="false" aria-controls="acc2"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></span><span class="acc-t"><strong>Полностью модульный</strong><span>1 700 слайдеров и 400 переключателей</span></span><svg class="acc-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-body" id="acc2" inert><div class="acc-in"><div class="acc-pad"><p>Больше 1 700 слайдеров и 400 переключателей в 12 вкладках. Любой эффект можно перенастроить или выключить прямо в меню шейдера.</p></div></div></div>
+          </div>
+          <div class="acc-item">
+            <button class="acc-btn" type="button" aria-expanded="false" aria-controls="acc3"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20l6-10 4 6 3-4 5 8z"/><circle cx="17" cy="6" r="2"/></svg></span><span class="acc-t"><strong>Атмосфера по биомам</strong><span>Свой туман у 64 биомов</span></span><svg class="acc-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-body" id="acc3" inert><div class="acc-in"><div class="acc-pad"><p>У каждого из 64 биомов свой цвет тумана, цвет и сила лучей света. На границах биомов цвета плавно перетекают, а при желании эффект доходит и до неба.</p></div></div></div>
+          </div>
+          <div class="acc-item">
+            <button class="acc-btn" type="button" aria-expanded="false" aria-controls="acc4"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17h18"/><path d="M7 17a5 5 0 0 1 10 0"/><path d="M12 7v2M5 10l1.5 1.5M19 10l-1.5 1.5"/></svg></span><span class="acc-t"><strong>Плавная смена времени суток</strong><span>Рассвет и закат без ступенек</span></span><svg class="acc-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-body" id="acc4" inert><div class="acc-in"><div class="acc-pad"><p>Тени, облака, звёзды, туманность и северное сияние живут по одним плавным часам, поэтому ничего не отстаёт и не перескакивает.</p></div></div></div>
+          </div>
+        </div>
+        <div class="acc">
+          <div class="acc-item">
+            <button class="acc-btn" type="button" aria-expanded="false" aria-controls="acc5"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 14z"/><path d="M9 17l-1 3M13 17l-1 3M17 17l-1 3"/></svg></span><span class="acc-t"><strong>Атмосфера и погода</strong><span>Сияние, закаты, туман, сезоны, гроза</span></span><svg class="acc-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-body" id="acc5" inert><div class="acc-in"><div class="acc-pad"><ul><li>7 палитр северного сияния и 5 палитр заката, или случайный закат каждый день.</li><li>Объёмный туман, дальняя дымка, туман в пещерах и лучи света.</li><li>Времена года с осенними цветами, радуги и опция «Нет дождя над облаками».</li><li>Better Thunder: в грозу слой облаков опускается, а молнии вспыхивают внутри облаков.</li></ul></div></div></div>
+          </div>
+          <div class="acc-item">
+            <button class="acc-btn" type="button" aria-expanded="false" aria-controls="acc6"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 18l6-8 4 5 3-3 7 6"/><path d="M2 21h20"/></svg></span><span class="acc-t"><strong>Distant Horizons и Voxy</strong><span>Дальний ландшафт выглядит так же</span></span><svg class="acc-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-body" id="acc6" inert><div class="acc-in"><div class="acc-pad"><p>Дальний ландшафт получает тот же туман, дымку, времена года, свет, тени и затенение, что и ближний.</p></div></div></div>
+          </div>
+          <div class="acc-item">
+            <button class="acc-btn" type="button" aria-expanded="false" aria-controls="acc7"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z"/></svg></span><span class="acc-t"><strong>Вкладка эффектов</strong><span>11 эффектов, у каждого своя страница</span></span><svg class="acc-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-body" id="acc7" inert><div class="acc-in"><div class="acc-pad"><div class="pills"><span>Low Health</span><span>Low Oxygen</span><span>Water Plunge</span><span>Exposure Spike</span><span>Screen Rain &amp; Dirt</span><span>Lens Fogging</span><span>Light Halos</span><span>Heat Distortion</span><span>Samsung Space Zoom</span><span>Camera Motion</span><span>Smooth Beacon Ray</span></div></div></div></div>
+          </div>
+          <div class="acc-item">
+            <button class="acc-btn" type="button" aria-expanded="false" aria-controls="acc8"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><span class="acc-t"><strong>Автоэкспозиция</strong><span>Смотрит на кадр, а не на часы</span></span><svg class="acc-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-body" id="acc8" inert><div class="acc-in"><div class="acc-pad"><p>Посмотрите на лампу — мир вокруг неё уходит в тень. Ламп больше — темнеет сильнее. Яркий день при этом остаётся как есть.</p></div></div></div>
+          </div>
+          <div class="acc-item">
+            <button class="acc-btn" type="button" aria-expanded="false" aria-controls="acc9"><span class="acc-ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 15c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M2 19c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M12 3s4 4 4 7a4 4 0 0 1-8 0c0-3 4-7 4-7z"/></svg></span><span class="acc-t"><strong>Вода и поверхности</strong><span>Рябь, листва, POM, руды</span></span><svg class="acc-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div class="acc-body" id="acc9" inert><div class="acc-in"><div class="acc-pad"><p>Реалистичная вода и интерактивная рябь, колышущаяся листва, параллакс-окклюзия, сгенерированные нормали, покрытые текстуры, светящиеся руды и обводка блока, которая повторяет текстуру, а не коробку.</p></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="clouds">
+    <div class="wrap">
+      <div class="card split2">
+        <div class="shot" data-img="shots/clouds.webp" role="img" aria-label="Облака Nubis Extended"></div>
+        <div class="split-text">
+          <h2>Облака Nubis Extended</h2>
+          <p class="muted">Объёмные облака в небе, с физикой спавна.<span class="more"> Включены по умолчанию во всех профилях. Нижний и верхний ярусы плывут с разной скоростью, у каждого свои области облаков.</span></p>
+          <div class="types" aria-label="Восемь типов облаков"><span>Кучевые</span><span>Слоисто-кучевые</span><span>Слоистые</span><span>Высококучевые</span><span>Перисто-кучевые</span><span>Перистые</span><span>Перисто-слоистые</span><span>Кучево-дождевое с наковальней</span></div>
+          <a class="btn cloud-more" href="technologies.html#nubis-extended">Подробнее</a>
+        </div>
+      </div>
+      <div class="trio">
+        <div class="card point"><span class="pic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 9h11a3 3 0 1 0-3-3"/><path d="M3 14h15a3 3 0 1 1-3 3"/><path d="M3 19h6"/></svg></span><h3>Живая погода</h3><p class="small muted">По небу плывут области высокого и низкого давления. Каждая ночь решает, насколько облачным будет завтра, а дождь постепенно затягивает небо.</p></div>
+        <div class="card point"><span class="pic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18z"/><path d="M12 9.5v5M9.5 12h5"/></svg></span><h3>Облака растут сами</h3><p class="small muted">Температура, влажность и устойчивость решают, где появится облако. Кучевые растут с дневным теплом и тают к закату, слоистые лежат низко влажным утром.</p></div>
+        <div class="card point"><span class="pic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><path d="M8 2v1.5M2 8h1.5M3.8 3.8l1 1M12.2 3.8l-1 1"/><path d="M9 20h8a3.5 3.5 0 0 0 0-7 5 5 0 0 0-9.4 1.7A2.8 2.8 0 0 0 9 20z"/></svg></span><h3>Свет сквозь облака</h3><p class="small muted">Многократное рассеяние и серебряная кайма к солнцу. Тени облаков на земле и отражения в воде. Лучи маяков и молнии светятся внутри облаков.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="post">
+    <div class="wrap">
+      <div class="head"><h2>Постобработка</h2><p class="muted">Три страницы симуляции камеры и плёнки. Всё складывается вместе.</p></div>
+      <div class="card split2 rev">
+        <div class="post-side">
+          <div class="tabs inset" role="tablist" aria-label="Постобработка">
+            <button type="button" role="tab" id="pt0" aria-selected="true" aria-controls="pp0">BodyCam</button>
+            <button type="button" role="tab" id="pt1" aria-selected="false" aria-controls="pp1">2KS</button>
+            <button type="button" role="tab" id="pt2" aria-selected="false" aria-controls="pp2">Старая камера</button>
+            <button type="button" role="tab" id="pt3" aria-selected="false" aria-controls="pp3">ASCII</button>
+            <button type="button" role="tab" id="pt4" aria-selected="false" aria-controls="pp4">Цвет</button>
+            <button type="button" role="tab" id="pt5" aria-selected="false" aria-controls="pp5">Ещё</button>
+          </div>
+          <div class="post-panels">
+          <div class="post-panel" role="tabpanel" id="pp0" aria-labelledby="pt0"><p><b>BodyCam:</b> Эффект нательной камеры, искажение по краям и ночное видение, которое само включается, когда сцена темнеет. Режим от LoLip_p.</p><div class="pills"><span>Рыбий глаз</span><span>Искажение по краям</span><span>Ночное видение</span></div></div>
+          <div class="post-panel" role="tabpanel" id="pp1" aria-labelledby="pt1" inert><p><b>2KS.</b> Вид как с видеокамеры, перенесён из шейдерпака 2KS с разрешения автора (SonicallGameX) вместе с большей частью его настроек.</p><div class="pills"><span>Вид видеокамеры</span><span>Настройки оригинала</span></div></div>
+          <div class="post-panel" role="tabpanel" id="pp2" aria-labelledby="pt2" inert><p><b>Старая камера.</b> Строки развёртки, свечение люминофора, изогнутый экран, искажения плёнки, хроматическая аберрация и шум синхронизации.</p><div class="pills"><span>Развёртка</span><span>Люминофор</span><span>Изогнутый экран</span><span>Плёнка</span><span>Аберрация</span><span>Шум синхронизации</span></div></div>
+          <div class="post-panel" role="tabpanel" id="pp3" aria-labelledby="pt3" inert><p><b>ASCII.</b> Весь кадр перерисовывается живой сеткой символов.</p><div class="pills"><span>Сетка символов</span><span>В реальном времени</span></div></div>
+          <div class="post-panel" role="tabpanel" id="pp4" aria-labelledby="pt4" inert><ul><li>16 тонмапперов, среди них AgX со своими образами, ACES, Gran Turismo, Hable, Lottes и PBR Neutral.</li><li>Баланс белого и трёхканальный грейдинг.</li><li>Цветовые пространства до Rec.2020.</li><li>Ночное видение, которое забирает цвет из темноты.</li></ul><div class="pills"><span>AgX</span><span>ACES</span><span>Gran Turismo</span><span>Hable</span><span>Lottes</span><span>PBR Neutral</span><span>Rec.2020</span></div></div>
+          <div class="post-panel" role="tabpanel" id="pp5" aria-labelledby="pt5" inert><p>Фильтры (среди них City Night), кинематографические полосы, зерно плёнки и вкладка Fun с 13 шуточными эффектами.</p><div class="pills"><span>City Night</span><span>Полосы</span><span>Зерно</span><span>Fun</span></div></div>
+          </div>
+          <div class="post-foot">
+            <div class="row"><div class="t"><strong>Всё складывается вместе</strong><span>Режимы и цвет можно включать одновременно</span></div><span class="pic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></svg></span></div>
+            <div class="row"><div class="t"><strong>Вкладка Fun</strong><span>13 шуточных эффектов</span></div><span class="pic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14.5a5 5 0 0 0 8 0"/><path d="M9 9.5h.01M15 9.5h.01"/></svg></span></div>
+          </div>
+        </div>
+        <div class="shot post-preview has-img" id="postPreview" role="img" aria-label="Постобработка">
+          <img class="post-image on" src="shots/post-bodycam.webp" alt="" aria-hidden="true" loading="lazy" decoding="async">
+          <img class="post-image" src="shots/post-2ks.webp" alt="" aria-hidden="true" loading="lazy" decoding="async">
+          <img class="post-image" src="shots/post-retro.webp" alt="" aria-hidden="true" loading="lazy" decoding="async">
+          <img class="post-image" src="shots/post-ascii.webp" alt="" aria-hidden="true" loading="lazy" decoding="async">
+          <img class="post-image" src="shots/post-colors.webp" alt="" aria-hidden="true" loading="lazy" decoding="async">
+          <img class="post-image" src="shots/post-more.webp" alt="" aria-hidden="true" loading="lazy" decoding="async">
+        </div>
+      </div>
+      <div class="card split2 pp">
+        <div class="shot" data-img="shots/post-profile.webp" role="img" aria-label="Пример пост-профиля: ночная улица в тумане"></div>
+        <div class="split-text">
+          <h3 class="h-big">7 пост-профилей</h3>
+          <p class="muted">Готовые образы в один клик, выбираются в начале меню. Каждый задаёт тонмаппер, палитру, контраст и цепочку эффектов. Они отдельны от профиля качества: как выглядит картинка и насколько тяжело работает шейдер — два разных выбора.</p>
+          <div class="pills"><span>Тонмаппер</span><span>Палитра</span><span>Контраст</span><span>Цепочка эффектов</span></div>
+        </div>
+      </div>
+      <div class="card q-card">
+        <div class="q-left">
+          <h3 class="h-big">Профили качества</h3>
+          <p class="muted">От Potato до Ultra Max, по умолчанию High+.</p>
+          <div class="prof-list"><span>Potato</span><span>Very Low</span><span>Low</span><span>Medium</span><span>High</span><span class="def">High+</span><span>Very High</span><span>Ultra</span><span>Ultra Max</span></div>
+        </div>
+        <div class="q-right">
+          <div class="row"><div class="t"><strong>Вкладка оптимизации</strong><span>Настройки оптимизации по умолчанию нейтральны, поднимать их или нет, это ваш выбор.</span></div><span class="pic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 18l4-5"/><path d="M12 18h.01"/></svg></span></div>
+          <div class="row"><div class="t"><strong>Страницы настроек</strong><span>Для всего, что захочется разобрать по частям.</span></div><span class="pic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="wrap">
+      <div class="cmp-head">
+        <div class="head">
+          <h2>Ванилла и Better Voxels</h2>
+          <p class="muted">Одна сцена без шейдера и с ним. Потяните разделитель.</p>
+        </div>
+        <div class="seg inset cmp-scenes" role="group" aria-label="Сцена">
+          <button type="button" data-scene="city" aria-pressed="true">Город<small>ночь</small></button>
+          <button type="button" data-scene="house" aria-pressed="false">Дом<small>рассвет</small></button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="cmp" id="cmp">
+          <div class="shot cmp-a" data-img="shots/city-vanilla.webp" role="img" aria-label="Ванилла"></div>
+          <div class="shot cmp-b" data-img="shots/city-bv.webp" role="img" aria-label="Better Voxels"></div>
+          <span class="cmp-tag l">Ванилла</span><span class="cmp-tag r">Better Voxels</span>
+          <div class="cmp-line" aria-hidden="true"><span class="cmp-knob"><svg viewBox="0 0 24 24"><path d="M9 6l-6 6 6 6M15 6l6 6-6 6"/></svg></span></div>
+          <input class="cmp-range" id="cmpRange" type="range" min="0" max="100" step="0.1" value="50" aria-label="Разделитель: ванилла слева, Better Voxels справа">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="get">
+    <div class="wrap">
+      <div class="duo">
+        <div class="card" id="versions">
+          <h3 style="margin-bottom:16px">Что нового</h3>
+          <div class="seg inset" role="group" aria-label="Версия">
+<!--SEG-->
+            <button type="button" data-v="1.7" aria-pressed="false">1.7<small>1 сен</small></button>
+            <button type="button" data-v="1.8" aria-pressed="true">1.8<small>25 сен</small></button>
+            <button type="button" disabled>1.9<small>впереди</small></button>
+<!--/SEG-->
+          </div>
+          <div class="version-panels"><div class="version-panel active">
+          <h3 id="vTitle">Better Voxels <!--CUR-->1.8<!--/CUR--></h3>
+          <div class="mono muted" id="vDate">25 сентября 2026</div>
+          <ul class="log" id="vLog"></ul>
+          </div></div>
+          <a class="btn full-log" id="fullLog" href="changelog.html">Полный ченжлог<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        </div>
+        <div class="card" id="dlcard">
+          <p class="big">Better Voxels <!--CUR-->1.8<!--/CUR--></p>
+          <div class="req"><!--REQ--><span>Iris</span><span>Java 1.18.2 – 1.21.x</span><span>26.1 – 26.3</span><!--/REQ--></div>
+          <div class="dlbtns">
+            <a class="btn mr" data-link="modrinth" href="https://modrinth.com/shader/BetterVoxels" target="_blank" rel="noopener"><svg class="bmark bm-mr" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.252.004a11.78 11.768 0 0 0-8.92 3.73 11 10.999 0 0 0-2.17 3.11 11.37 11.359 0 0 0-1.16 5.169c0 1.42.17 2.5.6 3.77.24.759.77 1.899 1.17 2.529a12.3 12.298 0 0 0 8.85 5.639c.44.05 2.54.07 2.76.02.2-.04.22.1-.26-1.7l-.36-1.37-1.01-.06a8.5 8.489 0 0 1-5.18-1.8 5.34 5.34 0 0 1-1.3-1.26c0-.05.34-.28.74-.5a37.572 37.545 0 0 1 2.88-1.629c.03 0 .5.45 1.06.98l1 .97 2.07-.43 2.06-.43 1.47-1.47c.8-.8 1.48-1.5 1.48-1.52 0-.09-.42-1.63-.46-1.7-.04-.06-.2-.03-1.02.18-.53.13-1.2.3-1.45.4l-.48.15-.53.53-.53.53-.93.1-.93.07-.52-.5a2.7 2.7 0 0 1-.96-1.7l-.13-.6.43-.57c.68-.9.68-.9 1.46-1.1.4-.1.65-.2.83-.33.13-.099.65-.579 1.14-1.069l.9-.9-.7-.7-.7-.7-1.95.54c-1.07.3-1.96.53-1.97.53-.03 0-2.23 2.48-2.63 2.97l-.29.35.28 1.03c.16.56.3 1.16.31 1.34l.03.3-.34.23c-.37.23-2.22 1.3-2.84 1.63-.36.2-.37.2-.44.1-.08-.1-.23-.6-.32-1.03-.18-.86-.17-2.75.02-3.73a8.84 8.839 0 0 1 7.9-6.93c.43-.03.77-.08.78-.1.06-.17.5-2.999.47-3.039-.01-.02-.1-.02-.2-.03Zm3.68.67c-.2 0-.3.1-.37.38-.06.23-.46 2.42-.46 2.52 0 .04.1.11.22.16a8.51 8.499 0 0 1 2.99 2 8.38 8.379 0 0 1 2.16 3.449 6.9 6.9 0 0 1 .4 2.8c0 1.07 0 1.27-.1 1.73a9.37 9.369 0 0 1-1.76 3.769c-.32.4-.98 1.06-1.37 1.38-.38.32-1.54 1.1-1.7 1.14-.1.03-.1.06-.07.26.03.18.64 2.56.7 2.78l.06.06a12.07 12.058 0 0 0 7.27-9.4c.13-.77.13-2.58 0-3.4a11.96 11.948 0 0 0-5.73-8.578c-.7-.42-2.05-1.06-2.25-1.06Z"/></svg>Скачать с Modrinth</a>
+            <a class="btn cf" data-link="curseforge" href="https://www.curseforge.com/minecraft/shaders/bettervoxels" target="_blank" rel="noopener"><svg class="bmark bm-cf" viewBox="0 0 24 24" aria-hidden="true"><path d="M18.326 9.2145S23.2261 8.4418 24 6.1882h-7.5066V4.4H0l2.0318 2.3576V9.173s5.1267-.2665 7.1098 1.2372c2.7146 2.516-3.053 5.917-3.053 5.917L5.0995 19.6c1.5465-1.4726 4.494-3.3775 9.8983-3.2857-2.0565.65-4.1245 1.6651-5.7344 3.2857h10.9248l-1.0288-3.2726s-7.918-4.6688-.8336-7.1127z"/></svg>Скачать с CurseForge</a>
+            <button class="btn solid" type="button" id="openDl" aria-haspopup="dialog"><svg class="bmark bm-dl" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.2 2h3.6c.4 0 .7.3.7.7V10h3.4c.6 0 .9.7.5 1.2l-5.9 6.3c-.3.3-.7.3-1 0l-5.9-6.3c-.4-.5-.1-1.2.5-1.2h3.4V2.7c0-.4.3-.7.7-.7zM2.5 15.5c0-.6.4-1 1-1h1.4c.6 0 1 .4 1 1v3.2h12.2v-3.2c0-.6.4-1 1-1h1.4c.6 0 1 .4 1 1v5.5c0 .6-.4 1-1 1H3.5c-.6 0-1-.4-1-1z"/></svg>Скачать с сайта</button>
+          </div>
+          <div class="btns subbtns">
+            <a class="btn gh" data-link="github" href="https://github.com/FASTDROPX/BetterVoxels" target="_blank" rel="noopener">GitHub</a>
+            <a class="btn dc" data-link="discord" href="https://discord.gg/GTtgFJw2P4" target="_blank" rel="noopener">Discord</a>
+            <a class="btn yt" data-link="youtube" href="https://youtube.com/@bettervoxels" target="_blank" rel="noopener">YouTube</a>
+          </div>
+        </div>
+      </div>
+      <div class="card thanks">
+        <h3 style="margin-bottom:16px">Благодарности</h3>
+        <ul class="credits">
+<!--CREDITS-->          <li><a class="credit" href="https://github.com/gri573" target="_blank" rel="noopener" aria-label="gri573, Rethinking Voxels, GitHub"><svg class="cr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg><span class="cr-t"><strong>gri573</strong><span>Rethinking Voxels</span></span></a></li>
+          <li><a class="credit" href="https://github.com/EminGT" target="_blank" rel="noopener" aria-label="EminGT, Complementary Shaders, GitHub"><svg class="cr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg><span class="cr-t"><strong>EminGT</strong><span>Complementary Shaders</span></span></a></li>
+          <li><a class="credit" href="https://github.com/sixthsurge" target="_blank" rel="noopener" aria-label="SixthSurge, форма Cumulus из Photon, GitHub"><svg class="cr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg><span class="cr-t"><strong>SixthSurge</strong><span>форма Cumulus из Photon</span></span></a></li>
+          <li><a class="credit" href="https://github.com/SonicallGameXGit" target="_blank" rel="noopener" aria-label="SonicallGameX, режим 2KS, GitHub"><svg class="cr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg><span class="cr-t"><strong>SonicallGameX</strong><span>режим 2KS</span></span></a></li>
+          <li><a class="credit" href="https://t.me/LoLip_p_Community" target="_blank" rel="noopener" aria-label="LoLip_p, режим BodyCam, Telegram"><svg class="cr-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.9 4.3 18.6 19.9c-.2 1.1-.9 1.4-1.8.9l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.2L6 13.4 1.1 11.9c-1.1-.3-1.1-1.1.2-1.6L20.5 2.9c.9-.3 1.7.2 1.4 1.4z"/></svg><span class="cr-t"><strong>LoLip_p</strong><span>режим BodyCam</span></span></a></li>
+<!--/CREDITS-->
+        </ul>
+      </div>
+      <footer class="foot card">
+        <div class="ft-top">
+          <div class="ft-brand">
+            <a class="brand" href="#top"><img class="logo" src="shots/logo.webp" width="28" height="28" alt="">Better Voxels</a>
+            <p>Шейдерпак для Minecraft на основе Rethinking Voxels и Complementary Reimagined.</p>
+            <a class="btn ft-up" href="#top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>Наверх</a>
+          </div>
+          <nav class="ft-col" aria-label="Проект"><h4>Проект</h4>
+            <a data-link="modrinth" href="https://modrinth.com/shader/BetterVoxels" target="_blank" rel="noopener">Modrinth</a>
+            <a data-link="curseforge" href="https://www.curseforge.com/minecraft/shaders/bettervoxels" target="_blank" rel="noopener">CurseForge</a>
+            <a data-link="github" href="https://github.com/FASTDROPX/BetterVoxels" target="_blank" rel="noopener">Исходный код на GitHub</a>
+            <a href="changelog.html">Полный ченжлог</a>
+            <a href="technologies.html">Технологии</a>
+          </nav>
+          <nav class="ft-col" aria-label="Связь"><h4>Связь</h4>
+            <a data-link="discord" href="https://discord.gg/GTtgFJw2P4" target="_blank" rel="noopener">Discord</a>
+            <a data-link="youtube" href="https://youtube.com/@bettervoxels" target="_blank" rel="noopener">YouTube</a>
+            <a data-link="issues" href="https://github.com/FASTDROPX/BetterVoxels/issues" target="_blank" rel="noopener">Сообщить об ошибке</a>
+          </nav>
+          <nav class="ft-col" aria-label="Лицензия и основа"><h4>Лицензия</h4>
+            <a href="https://github.com/ComplementaryDevelopment/ComplementaryReimagined/blob/main/License.txt" target="_blank" rel="noopener">Complementary License Agreement 1.6</a>
+            <a href="https://github.com/ComplementaryDevelopment/ComplementaryReimagined" target="_blank" rel="noopener">Complementary Reimagined</a>
+            <a href="https://github.com/gri573" target="_blank" rel="noopener">Rethinking Voxels</a>
+          </nav>
+        </div>
+        <div class="ft-bot">
+          <span>© 2026 FastdropX, Better Voxels</span>
+          <span>Распространяется по Complementary License Agreement 1.6. Исходные уведомления об авторских правах сохранены.</span>
+          <span>Не является официальным продуктом Minecraft. Не одобрено Mojang или Microsoft и не связано с ними.</span>
+        </div>
+      </footer>
+    </div>
+  </section>
+</main>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="vblur" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="0 2.6"/></filter></svg>
+<div class="dlm" id="dlm" hidden>
+  <div class="dlm-back" data-close></div>
+  <div class="dlm-card card" role="dialog" aria-modal="true" aria-labelledby="dlmT">
+    <div class="dlm-top">
+      <div><h3 id="dlmT">Скачать с сайта</h3><div class="mono muted" style="margin-top:4px">Выберите версию шейдера</div></div>
+      <button class="dlm-x" type="button" data-close aria-label="Закрыть">×</button>
+    </div>
+    <div class="pick">
+    <div class="sel" id="sel">
+      <button class="sel-btn raise-sm" type="button" id="selBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="selList"><span><span id="selVal">1.8</span><small id="selDate"></small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+      <ul class="sel-list" id="selList" role="listbox" tabindex="-1" aria-label="Версия"></ul>
+    </div>
+    <div class="prev" id="prev">
+      <div class="prev-img" id="prevImg"></div>
+      <div class="prev-shade"></div>
+      <div class="prev-info">
+        <div class="prev-text">
+          <div class="mcname" id="mcName" aria-live="polite"></div>
+          <div class="prev-meta" id="prevMeta">Java 1.18.2 – 26.3, Iris и Oculus</div>
+          <div class="prev-downloads"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg><b id="prevCount" aria-live="polite">—</b><span>Загрузок</span></div>
+        </div>
+        <a class="btn prev-dl" id="prevDl" href="#" download><span class="dl-ready">Скачать</span><span class="dl-paint" aria-hidden="true"><span class="dl-fill"></span></span><span class="dl-success" aria-hidden="true">Успешно</span></a>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<script src="download-motion.js"></script>
+<script src="motion-blur.js" defer></script>
+<script src="overscroll-egg.js" defer></script>
+<script>
+(function(){
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function clamp(x,a,b){ return x<a?a:x>b?b:x; }
+  function onView(node, fn, th){
+    if (!('IntersectionObserver' in window)) return fn();
+    var o = new IntersectionObserver(function(es){ if (es[0].isIntersecting){ fn(); o.disconnect(); } }, {threshold:th||.4});
+    o.observe(node);
+  }
+
+  // ---- theme switch ----
+  var sc = document.getElementById('sc');
+  var root = document.documentElement, tbtn = document.getElementById('theme');
+  var mq = matchMedia('(prefers-color-scheme: dark)');
+  try { var saved = localStorage.getItem('bv-theme'); if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved); } catch (e) {}
+  function eff(){ var a = root.getAttribute('data-theme'); return a === 'dark' || a === 'light' ? a : (mq.matches ? 'dark' : 'light'); }
+  function sync(){ tbtn.setAttribute('aria-checked', eff() === 'dark' ? 'true' : 'false'); }
+  function applyTheme(n){
+    root.setAttribute('data-theme', n);
+    try { localStorage.setItem('bv-theme', n); } catch (e) {}
+    sync();
+  }
+  // Telegram-style switch: a copy of the page in the new theme grows in a circle from the toggle.
+  // Everything the edge crosses is split: new colours inside the circle, old colours outside.
+  function freeze(src, copy){
+    var running = new Set();
+    if (document.getAnimations) document.getAnimations().forEach(function(a){
+      var ef = a.effect; if (ef && ef.target && !ef.pseudoElement) running.add(ef.target);
+    });
+    var so = [src].concat(Array.prototype.slice.call(src.querySelectorAll('*')));
+    var co = [copy].concat(Array.prototype.slice.call(copy.querySelectorAll('*')));
+    for (var i=0; i<so.length && i<co.length; i++){
+      if (!running.has(so[i])) continue;
+      var cs = getComputedStyle(so[i]), st = co[i].style;
+      st.transform = cs.transform; st.translate = cs.translate; st.scale = cs.scale; st.opacity = cs.opacity; st.clipPath = cs.clipPath;
+    }
+    var si = src.querySelectorAll('input'), ci = copy.querySelectorAll('input');
+    for (var j=0; j<si.length; j++) ci[j].value = si[j].value;
+  }
+  // no cooldown: a click during a reveal starts the next one at once. `want` is the theme the last click asked
+  // for (the DOM may not have it yet), `gen` lets only the newest reveal clean up after itself
+  var want = null, gen = 0, fb = null;
+  tbtn.addEventListener('click', function(){
+    var n = (want || eff()) === 'dark' ? 'light' : 'dark';
+    want = n; var my = ++gen;
+    // an unfinished copy-reveal (fallback path) is cut short: its theme goes on now, its copy goes away
+    if (fb){ fb.anim.onfinish = null; fb.anim.cancel(); fb.ov.remove(); sc.removeEventListener('scroll', fb.follow); applyTheme(fb.n); root.classList.remove('vt'); fb = null; }
+    if (reduce || !Element.prototype.animate){ applyTheme(n); want = null; return; }
+    var r = tbtn.getBoundingClientRect(), x = r.left + r.width/2, y = r.top + r.height/2;
+    // on phones the snapshot also covers the area under the browser bars, so innerHeight is too short:
+    // take the tallest known height and overshoot a little, so the edge leaves the screen while still moving
+    var H = Math.max(innerHeight, document.documentElement.clientHeight, (window.visualViewport && visualViewport.height) || 0, screen.height || 0);
+    var R = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, H - y)) * 1.12 + 8;
+    // where the browser has View Transitions: it snapshots the old theme and reveals the new one in a circle
+    // on the GPU - no copy of the page, so no freeze and no jump on phones. The new side is live, so the
+    // sun/moon knob still flies and morphs inside the circle (only its transitions survive the .vt freeze)
+    if (document.startViewTransition){
+      var vtr = document.startViewTransition(function(){ root.classList.add('vt'); applyTheme(n); });
+      vtr.ready.then(function(){
+        root.animate({clipPath:['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + R + 'px at ' + x + 'px ' + y + 'px)']},
+          {duration:750, easing:'cubic-bezier(.33,.7,.35,1)', pseudoElement:'::view-transition-new(root)'});
+      }).catch(function(){});
+      var done = function(){ if (my === gen){ root.classList.remove('vt'); want = null; } };
+      vtr.finished.then(done, done);
+      return;
+    }
+    var ov = document.createElement('div');
+    ov.className = 'tvo tv-' + n; ov.setAttribute('aria-hidden', 'true');
+    var mainEl = document.querySelector('main'), mainCopy = null;
+    [document.querySelector('.topfade'), document.querySelector('.bar'), mainEl].forEach(function(src){
+      var c = src.cloneNode(true);
+      // gradients and clips get their own ids in the copy, so the copy paints them with the new theme
+      Array.prototype.forEach.call(c.querySelectorAll('linearGradient[id],radialGradient[id],clipPath[id],mask[id]'), function(gr){
+        var old = gr.id, nu = old + '-tv';
+        gr.id = nu;
+        ['fill', 'clip-path', 'mask'].forEach(function(at){
+          Array.prototype.forEach.call(c.querySelectorAll('[' + at + '="url(#' + old + ')"]'), function(e){ e.setAttribute(at, 'url(#' + nu + ')'); });
+        });
+      });
+      c.removeAttribute('id');
+      Array.prototype.forEach.call(c.querySelectorAll('[id]'), function(e){ if (!/-tv$/.test(e.id)) e.removeAttribute('id'); });
+      freeze(src, c);
+      if (src === mainEl){
+        var mr = mainEl.getBoundingClientRect();
+        c.style.position = 'absolute'; c.style.left = mr.left + 'px'; c.style.top = mr.top + 'px'; c.style.width = mr.width + 'px'; c.style.margin = '0';
+        mainCopy = c;
+      }
+      ov.appendChild(c);
+    });
+    var sw = ov.querySelector('.theme .switch');
+    if (sw){ sw.setAttribute('aria-checked', n === 'dark' ? 'false' : 'true'); requestAnimationFrame(function(){ requestAnimationFrame(function(){ sw.setAttribute('aria-checked', n === 'dark' ? 'true' : 'false'); }); }); }
+    ov.style.clipPath = 'circle(0px at ' + x + 'px ' + y + 'px)';
+    document.body.appendChild(ov);
+    // horizontal scrollers keep their position in the copy, otherwise the scene strip jumps inside the circle
+    var sl = mainEl.querySelector('.scene-list'), cl = mainCopy && mainCopy.querySelector('.scene-list');
+    if (sl && cl) cl.scrollLeft = sl.scrollLeft;
+    function follow(){ mainCopy.style.top = mainEl.getBoundingClientRect().top + 'px'; }
+    sc.addEventListener('scroll', follow, {passive:true});
+    var anim = ov.animate({clipPath:['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + R + 'px at ' + x + 'px ' + y + 'px)']},
+      {duration:750, easing:'cubic-bezier(.33,.7,.35,1)', fill:'forwards'});
+    fb = {anim:anim, ov:ov, follow:follow, n:n};
+    anim.onfinish = function(){
+      fb = null;
+      root.classList.add('vt');
+      applyTheme(n);
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){
+        ov.remove(); sc.removeEventListener('scroll', follow);
+        if (my === gen){ root.classList.remove('vt'); want = null; }
+      }); });
+    };
+  });
+  if (mq.addEventListener) mq.addEventListener('change', sync);
+  new MutationObserver(sync).observe(root, {attributes:true, attributeFilter:['data-theme']});
+  sync();
+
+  function io(p){ return p<.5 ? 4*p*p*p : 1-Math.pow(-2*p+2,3)/2; }
+  // exponential out: the numbers rush in and settle softly
+  function expoOut(p){ return p >= 1 ? 1 : 1 - Math.pow(2, -10*p); }
+  function tween(dur, fn, done){
+    if (reduce){ fn(1); if (done) done(); return; }
+    var t0 = performance.now();
+    (function step(now){ var p = clamp((now-t0)/dur, 0, 1); fn(p); if (p < 1) requestAnimationFrame(step); else if (done) done(); })(t0);
+  }
+
+  // ---- scene viewer: the screen cross-fades between shots; it plays on its own until touched ----
+  var SCN = [['cover','Лес с высоты','Дымка до горизонта и тени облаков на земле'],['clouds','Облака','Nubis Extended, восемь типов облаков'],['water','Вода','Рябь и отражения облаков'],['light','Цветной свет','Освещение с трассировкой путей'],['storm','Гроза','Ночь, дождь и свет фонаря'],['sunset','Закат','Свои палитры у каждого заката'],['distance','Дальность','Distant Horizons и Voxy'],['atmosphere','Туман','Объёмный туман и лучи света']];
+  var screen = document.getElementById('screen'), layers = screen.querySelectorAll('.layer'), front = 0, scK = 0;
+  var scBtns = Array.prototype.slice.call(document.querySelectorAll('.scene')), scDots = document.querySelectorAll('#scDots i');
+  var scName = document.getElementById('scName'), scDesc = document.getElementById('scDesc');
+  var playing = !reduce, scTimer = 0, heroSeen = true;
+  function showSc(k){
+    scK = (k + SCN.length) % SCN.length;
+    var back = layers[1 - front];
+    back.style.backgroundImage = 'url("shots/' + SCN[scK][0] + '.webp")';
+    back.classList.add('on'); layers[front].classList.remove('on'); front = 1 - front;
+    scBtns.forEach(function(b, j){ b.setAttribute('aria-selected', j === scK ? 'true' : 'false'); });
+    Array.prototype.forEach.call(scDots, function(d, j){ d.classList.toggle('on', j === scK); });
+    if (scName){ scName.textContent = SCN[scK][1]; scDesc.textContent = SCN[scK][2]; }
+    // on narrow screens the list is a sideways strip: bring the chosen scene into it
+    var list = scBtns[scK].closest('.scene-list');
+    if (list.scrollWidth > list.clientWidth) list.scrollTo({left: scBtns[scK].parentNode.offsetLeft - 8, behavior: reduce ? 'auto' : 'smooth'});
+  }
+  function arm(){ clearInterval(scTimer); if (playing) scTimer = setInterval(function(){ if (heroSeen && !document.hidden) showSc(scK + 1); }, 12000); }
+  function setPlay(on){ playing = on; arm(); }
+  scBtns.forEach(function(b, j){ b.addEventListener('click', function(){ showSc(j); setPlay(false); }); });
+  document.getElementById('scPrev').addEventListener('click', function(){ showSc(scK - 1); setPlay(false); });
+  document.getElementById('scNext').addEventListener('click', function(){ showSc(scK + 1); setPlay(false); });
+  if ('IntersectionObserver' in window) new IntersectionObserver(function(es){ heroSeen = es[0].isIntersecting; }).observe(screen);
+  setPlay(playing);
+
+  // ---- features accordion: one row opens at a time ----
+  var accItems = Array.prototype.slice.call(document.querySelectorAll('.acc-item'));
+  accItems.forEach(function(it){
+    it.querySelector('.acc-btn').addEventListener('click', function(){
+      var open = !it.classList.contains('open');
+      accItems.forEach(function(x){ var on = x === it && open; x.classList.toggle('open', on); x.querySelector('.acc-btn').setAttribute('aria-expanded', on ? 'true' : 'false'); x.querySelector('.acc-body').inert = !on; });
+      measure();
+    });
+  });
+
+  // on a phone the list starts fully closed, so it is a short column of titles
+  // every item starts closed (phone and desktop); the markup says so too, this only makes the bodies inert
+  accItems.forEach(function(x){ x.classList.remove('open'); x.querySelector('.acc-btn').setAttribute('aria-expanded', 'false'); x.querySelector('.acc-body').inert = true; });
+
+  // ---- post-processing tabs ----
+  var pTabs = Array.prototype.slice.call(document.querySelectorAll('.tabs [role="tab"]'));
+  var postPreview=document.getElementById('postPreview');
+  var postImages=Array.prototype.slice.call(postPreview.querySelectorAll('.post-image')),postRequest=0;
+  function showPostImage(k){
+    var request=++postRequest,img=postImages[k];
+    function reveal(){if(request!==postRequest)return;postImages.forEach(function(image,i){image.classList.toggle('on',i===k);});}
+    if(img.complete&&img.naturalWidth)reveal();
+    else if(img.decode)img.decode().then(reveal,function(){});
+    else img.addEventListener('load',reveal,{once:true});
+  }
+  function showTab(k){
+    showPostImage(k);
+    pTabs.forEach(function(t, j){ t.setAttribute('aria-selected', j === k ? 'true' : 'false'); t.tabIndex = j === k ? 0 : -1; var pn = document.getElementById('pp' + j); pn.classList.toggle('on', j === k); pn.inert = j !== k; });
+  }
+  pTabs.forEach(function(t, k){
+    t.addEventListener('click', function(){ showTab(k); });
+    t.addEventListener('keydown', function(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft'){ e.preventDefault(); var n = (k + (e.key === 'ArrowRight' ? 1 : -1) + pTabs.length) % pTabs.length; showTab(n); pTabs[n].focus(); }
+    });
+  });
+  showTab(0);
+
+  // ---- count-ups for the numbers strip ----
+  Array.prototype.forEach.call(document.querySelectorAll('[data-count]'), function(n){
+    var to = +n.dataset.count; n.textContent = '0';
+    onView(n, function(){ tween(900, function(p){ n.textContent = Math.round(to*expoOut(p)).toLocaleString('ru-RU'); }); }, .8);
+  });
+  var dl = document.getElementById('dl');
+  var dlK = parseFloat(dl.textContent.replace(',', '.')) * (/K/i.test(dl.textContent) ? 1000 : 1);
+  var dlFinished = false, versionDownloads = {};
+  function formatDownloads(n){ return n >= 1000 ? (n / 1000).toFixed(1).replace('.', ',') + 'K' : Math.round(n).toLocaleString('ru-RU'); }
+  function updateDownloads(n){
+    if (typeof n !== 'number' || !isFinite(n) || n < 0) return;
+    dlK = n;
+    if (dlFinished) dl.textContent = formatDownloads(dlK);
+  }
+  // the live count: our server sums Modrinth + CurseForge + downloads from this site (/api/downloads);
+  // without that server (a plain preview) it asks Modrinth's public API; if both fail the stored number stays
+  // GitHub Pages copy (pages_build.py): no server here. Older versions keep the numbers from the
+  // admin's statistics at build time; LIVE versions and the project total come from Modrinth's API.
+  var BAKED = {"versions": {"1.0": 1919, "1.1": 3420, "1.2": 798, "1.3": 2761, "1.4": 2619, "1.5": 2506, "1.6": 3750}, "extra": 5997, "live": ["1.7", "1.8"], "project": "BetterVoxels"};
+  (function(){ for (var v in BAKED.versions) versionDownloads[v] = {total: BAKED.versions[v], ready: true}; })();
+  function loadDownloads(){
+    if (!window.fetch) return;
+    var api = 'https://api.modrinth.com/v2/project/' + BAKED.project;
+    fetch(api).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+      if (d) updateDownloads(d.downloads + BAKED.extra);
+    }).catch(function(){});
+    fetch(api + '/version').then(function(r){ return r.ok ? r.json() : null; }).then(function(list){
+      if (!list) return;
+      for (var i = 0; i < list.length; i++)
+        if (BAKED.live.indexOf(list[i].version_number) >= 0)
+          versionDownloads[list[i].version_number] = {total: list[i].downloads, ready: true};
+      updatePreviewCount();
+    }).catch(function(){});
+  }
+  loadDownloads();
+
+  // ---- statistics: a tap on Modrinth / CurseForge and a download from this site are counted by our server.
+  // No cookies, nothing personal is sent: just which button and which version ----
+  var CURV = /*CURV2*/"1.8"/*/CURV2*/;
+  function track(k, v){
+    try {
+      var body = JSON.stringify({k: k, v: v || CURV});
+      void body;   // GitHub Pages copy: no statistics server
+      if (k === 'download') setTimeout(function(){ loadDownloads(0); }, 500);
+    } catch (e) {}
+  }
+  document.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a[data-link="modrinth"],a[data-link="curseforge"]');
+    if (a) track(a.getAttribute('data-link'));
+  });
+  onView(dl, function(){ tween(900, function(p){ dl.textContent = formatDownloads(dlK*expoOut(p)); }, function(){ dlFinished = true; dl.textContent = formatDownloads(dlK); }); }, .6);
+
+  // ---- shots: a frame with data-img shows that screenshot once it is near the screen; empty keeps the placeholder ----
+  Array.prototype.forEach.call(document.querySelectorAll('.shot[data-img]'), function(sh){
+    var url = sh.getAttribute('data-img'); if (!url) return;
+    onView(sh, function(){ sh.style.backgroundImage = 'url("' + url + '")'; sh.classList.add('has-img'); }, .01);
+  });
+
+  // ---- before / after: the range input sets where the top shot is clipped ----
+  var cmp = document.getElementById('cmp'), cmpRange = document.getElementById('cmpRange');
+  function setCmp(){ cmp.style.setProperty('--x', cmpRange.value + '%'); }
+  cmpRange.addEventListener('input', setCmp);
+  setCmp();
+  var cmpA = cmp.querySelector('.cmp-a'), cmpB = cmp.querySelector('.cmp-b');
+  var sceneBtns = Array.prototype.slice.call(document.querySelectorAll('.cmp-scenes button'));
+  function showScene(name){
+    sceneBtns.forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.scene === name ? 'true' : 'false'); });
+    [[cmpA, 'vanilla'], [cmpB, 'bv']].forEach(function(x){
+      var url = 'shots/' + name + '-' + x[1] + '.webp';
+      x[0].setAttribute('data-img', url); x[0].style.backgroundImage = 'url("' + url + '")'; x[0].classList.add('has-img');
+    });
+  }
+  sceneBtns.forEach(function(b){ b.addEventListener('click', function(){ showScene(b.dataset.scene); }); });
+  // warm the other scene once the slider is near, so switching doesn't flash an empty frame
+  onView(cmp, function(){ ['house-vanilla', 'house-bv'].forEach(function(n){ new Image().src = 'shots/' + n + '.webp'; }); }, .01);
+
+  // ---- versions ----
+  var V = /*WHATSNEW*/{"1.7": ["1 сентября 2026", ["Вкладка тонмаппинга с 11 кривыми", "Режим камеры 2KS", "Новая автоэкспозиция по содержимому кадра", "Семь палитр северного сияния", "Опция «Нет дождя над облаками»", "Вкладка Fun и искривление мира"]], "1.8": ["25 сентября 2026", ["Облака Nubis Extended включены по умолчанию (бета)", "Заново собранная цветокоррекция: 16 тонмапперов, грейдинг, Night Vision", "Палитры заката, дальняя дымка и поддержка Voxy", "Страницы Distant Horizons и Better Thunder", "Цвет дождя и воды по биомам, свой скайбокс", "Модовые блоки и сущности теперь светят"]]}/*/WHATSNEW*/;
+  var segBtns = Array.prototype.slice.call(document.querySelectorAll('.seg button[data-v]'));
+  var versionPanels=document.querySelector('.version-panels'),versionNodes={};
+  var initialVersion=segBtns.filter(function(b){return b.getAttribute('aria-pressed')==='true';})[0].dataset.v;
+  Object.keys(V).forEach(function(v){
+    var panel=v===initialVersion?versionPanels.firstElementChild:document.createElement('div');
+    panel.className='version-panel';
+    if(v!==initialVersion){panel.innerHTML='<h3></h3><div class="mono muted"></div><ul class="log"></ul>';versionPanels.appendChild(panel);}
+    panel.querySelector('h3').textContent='Better Voxels '+v;
+    panel.querySelector('.mono').textContent=V[v][0];
+    var log=panel.querySelector('.log');log.replaceChildren();
+    V[v][1].forEach(function(text){var li=document.createElement('li');li.textContent=text;log.appendChild(li);});
+    versionNodes[v]=panel;
+  });
+  function showV(v){
+    segBtns.forEach(function(b){b.setAttribute('aria-pressed',b.dataset.v===v?'true':'false');});
+    Object.keys(versionNodes).forEach(function(key){var panel=versionNodes[key],active=key===v;panel.classList.toggle('active',active);panel.setAttribute('aria-hidden',active?'false':'true');panel.inert=!active;});
+  }
+  segBtns.forEach(function(b){b.addEventListener('click',function(){showV(b.dataset.v);});});
+  showV(/*CURV*/"1.8"/*/CURV*/);
+
+  // ---- site download dialog ----
+  var BUILDS = /*BUILDS*/[
+    {"v":"1.8", "date":"25 сен 2026", "name":"§1§lBetter§f§lVoxels v1.8", "mc":"1.18.2 – 26.3", "file":"downloads/BetterVoxels-v1.8.zip", "size":22119488, "img":""},
+    {"v":"1.7", "date":"1 сен 2026", "name":"§1§lBetter§f§lVoxels v1.7", "mc":"1.18.2 – 26.3", "file":"downloads/BetterVoxels-v1.7.zip", "size":22002672, "img":""},
+    {"v":"1.6", "date":"13 авг. 2026", "name":"§1§lBetter§f§lVoxels v1.6", "mc":"1.18.2 – 26.3", "file":"downloads/BetterVoxels-v1.6.zip", "size":22048957, "img":""},
+    {"v":"1.5", "date":"5 авг. 2026", "name":"§1§lBetter§f§lVoxels v1.5", "mc":"1.18.2 – 26.3", "file":"downloads/BetterVoxels-v1.5.zip", "size":21922239, "img":""},
+    {"v":"1.4", "date":"29 июл. 2026", "name":"§1§lBetter§f§lVoxels v1.4", "mc":"1.18.2 – 26.3", "file":"downloads/BetterVoxels-v1.4.zip", "size":21957468, "img":""},
+    {"v":"1.3", "date":"22 июл. 2026", "name":"§1§lBetter§f§lVoxels v1.3", "mc":"1.18.2 – 26.3", "file":"downloads/BetterVoxels-v1.3.zip", "size":21920298, "img":""},
+    {"v":"1.2", "date":"20 июл. 2026", "name":"§1§lBetter§f§lVoxels v1.2", "mc":"1.18.2 – 26.3", "file":"downloads/BetterVoxels-v1.2.zip", "size":8318804, "img":""},
+    {"v":"1.1", "date":"12 июл. 2026", "name":"§1§lBetter§f§lVoxels v1.1", "mc":"1.18.2 – 26.3", "file":"downloads/BetterVoxels-v1.1.zip", "size":8314824, "img":""},
+    {"v":"1.0", "date":"6 июл. 2026", "name":"§1§lBetter§f§lVoxels v1.0", "mc":"1.18.2 – 26.3", "file":"downloads/BetterVoxels-v1.0.zip", "size":8334547, "img":""}
+  ]/*/BUILDS*/;
+  var MC = {'0':'#000000','1':'#0000aa','2':'#00aa00','3':'#00aaaa','4':'#aa0000','5':'#aa00aa','6':'#ffaa00','7':'#aaaaaa','8':'#555555','9':'#5555ff','a':'#55ff55','b':'#55ffff','c':'#ff5555','d':'#ff55ff','e':'#ffff55','f':'#ffffff'};
+  // white would vanish on the light clay and dark blue on the dark one: those two follow the theme
+  var MCV = {'#ffffff':'var(--mc-f)', '#0000aa':'var(--mc-1)'};
+  function parseMc(str){
+    var out = [], st = {c:'#ffffff', b:false, i:false, u:false, s:false};
+    for (var k=0; k<str.length; k++){
+      var ch = str[k];
+      if (ch === '§' && k+1 < str.length){
+        var code = str[++k].toLowerCase();
+        if (MC[code]) st = {c:MC[code], b:false, i:false, u:false, s:false};
+        else if (code === 'l') st.b = true;
+        else if (code === 'o') st.i = true;
+        else if (code === 'n') st.u = true;
+        else if (code === 'm') st.s = true;
+        else if (code === 'r') st = {c:'#ffffff', b:false, i:false, u:false, s:false};
+        continue;
+      }
+      out.push({ch:ch, c:st.c, b:st.b, i:st.i, u:st.u, s:st.s});
+    }
+    return out;
+  }
+  function styleGlyph(g, d){
+    g.textContent = d.ch === ' ' ? '\u00a0' : d.ch;
+    g.style.color = MCV[d.c] || d.c;
+    g.style.fontWeight = d.b ? '800' : '400';
+    g.style.fontStyle = d.i ? 'italic' : 'normal';
+    g.style.textDecoration = (d.u ? 'underline ' : '') + (d.s ? 'line-through' : '') || 'none';
+  }
+  function key(d){ return d.ch + d.c + d.b + d.i + d.u + d.s; }
+  var mcName = document.getElementById('mcName'), slots = [], cur = [];
+  function setName(str, animate){
+    var next = parseMc(str), n = 0;
+    while (slots.length < next.length){
+      var sl = document.createElement('span'); sl.className = 'slot';
+      var g0 = document.createElement('span'); g0.className = 'g'; sl.appendChild(g0);
+      mcName.appendChild(sl); slots.push(sl); cur.push(null);
+    }
+    for (var k=0; k<slots.length; k++){
+      var sl2 = slots[k], d = next[k] || null, old = cur[k];
+      if (old && d && key(old) === key(d)) continue;
+      var live = sl2.querySelector('.g:not(.out)');
+      if (!animate || reduce || !Element.prototype.animate){
+        if (d){ styleGlyph(live, d); sl2.style.display = ''; } else sl2.style.display = 'none';
+        cur[k] = d; continue;
+      }
+      var delay = n * 28; n++;
+      if (old && live.textContent){
+        var leaving = live.cloneNode(true); leaving.classList.add('out', 'mb');
+        sl2.appendChild(leaving);
+        leaving.animate([{transform:'translateY(0)', opacity:1}, {transform:'translateY(.7em)', opacity:0}],
+          {duration:320, delay:delay, easing:'cubic-bezier(.5,0,.75,0)', fill:'both'}).onfinish = (function(x){ return function(){ x.remove(); }; })(leaving);
+      }
+      if (d){
+        sl2.style.display = '';
+        styleGlyph(live, d);
+        live.classList.add('mb');
+        var a = live.animate([{transform:'translateY(-.7em)', opacity:0}, {transform:'translateY(0)', opacity:1}],
+          {duration:420, delay:delay + 60, easing:'cubic-bezier(.16,1,.3,1)', fill:'both'});
+        a.onfinish = (function(x){ return function(){ x.classList.remove('mb'); }; })(live);
+      } else {
+        live.textContent = '';
+        setTimeout((function(x){ return function(){ if (!cur[slots.indexOf(x)]) x.style.display = 'none'; }; })(sl2), 360 + delay);
+      }
+      cur[k] = d;
+    }
+  }
+  var dlm = document.getElementById('dlm'), openDl = document.getElementById('openDl');
+  var sel = document.getElementById('sel'), selBtn = document.getElementById('selBtn'), selList = document.getElementById('selList');
+  var selVal = document.getElementById('selVal'), selDate = document.getElementById('selDate');
+  var pickBox = document.querySelector('.pick'), prevBox = document.getElementById('prev'), prevImg = document.getElementById('prevImg'), prevMeta = document.getElementById('prevMeta'), prevDl = document.getElementById('prevDl');
+  var curBuild = 0, lastFocus = null;
+  var prevCount = document.getElementById('prevCount');
+  function updatePreviewCount(){
+    if (!prevCount || !BUILDS[curBuild]) return;
+    var count = versionDownloads[BUILDS[curBuild].v];
+    prevCount.textContent = count && count.ready ? count.total.toLocaleString('ru-RU') : '—';
+  }
+  var downloadBusyUntil=0,downloadResetTimer=0,downloadAnimations=[];
+  function resetDownloadMotion(){
+    clearTimeout(downloadResetTimer);
+    downloadAnimations.forEach(function(a){a.cancel();});downloadAnimations=[];
+    downloadBusyUntil=0;prevDl.classList.remove('dl-running');
+    prevDl.removeAttribute('aria-disabled');prevDl.removeAttribute('aria-busy');
+  }
+  function runDownloadMotion(){
+    resetDownloadMotion();
+    prevDl.classList.add('dl-running');prevDl.setAttribute('aria-disabled','true');prevDl.setAttribute('aria-busy','true');
+    var motion=window.BVDownloadMotion.play(prevDl);
+    downloadAnimations=motion.animations;
+    downloadBusyUntil=performance.now()+motion.duration;
+    downloadResetTimer=setTimeout(resetDownloadMotion,motion.duration);
+  }
+  prevDl.addEventListener('click',function(e){
+    if(performance.now()<downloadBusyUntil){e.preventDefault();e.stopImmediatePropagation();return;}
+    runDownloadMotion();track('download',prevDl.dataset.v);
+  });
+  prevDl.addEventListener('auxclick',function(e){if(performance.now()<downloadBusyUntil)e.preventDefault();});
+  BUILDS.forEach(function(b, k){
+    var li = document.createElement('li');
+    li.setAttribute('role', 'option'); li.id = 'opt-' + k; li.style.setProperty('--k', k);
+    li.textContent = b.v;
+    li.addEventListener('click', function(){ choose(k); });
+    selList.appendChild(li);
+  });
+  var opts = Array.prototype.slice.call(selList.children), hl = 0;
+  var ind = document.createElement('li'); ind.className = 'sel-ind'; ind.setAttribute('role', 'presentation'); ind.setAttribute('aria-hidden', 'true');
+  selList.insertBefore(ind, selList.firstChild);
+  function placeInd(k, glide){
+    var o = opts[k]; if (!o || !o.offsetWidth) return;
+    if (!glide){ selList.classList.add('snap'); }
+    ind.style.width = o.offsetWidth + 'px'; ind.style.height = o.offsetHeight + 'px';
+    ind.style.borderRadius = getComputedStyle(o).borderRadius;
+    ind.style.transform = 'translate(' + o.offsetLeft + 'px,' + o.offsetTop + 'px)';
+    if (!glide){ ind.offsetWidth; selList.classList.remove('snap'); }
+  }
+  // Preview text and translations can resize the centred grid after pick().
+  // Keep the indicator aligned with the option's final layout, including during its flight.
+  var indFrame=0;
+  function alignInd(){
+    cancelAnimationFrame(indFrame);
+    indFrame=requestAnimationFrame(function(){if(sel.classList.contains('open'))placeInd(curBuild,true);});
+  }
+  if('ResizeObserver' in window){
+    var indObserver=new ResizeObserver(alignInd);
+    indObserver.observe(selList);
+    opts.forEach(function(o){indObserver.observe(o);});
+  }
+  addEventListener('resize',function(){if(sel.classList.contains('open'))placeInd(curBuild,false);});
+  var closing = 0;
+  function choose(k){
+    if (closing) return;
+    pick(k, true); setHl(k); placeInd(k, true); alignInd();
+    closing = setTimeout(function(){ closing = 0; closeSel(true); }, reduce ? 0 : 750);
+  }
+  function setHl(k){ hl = k; opts.forEach(function(o, j){ o.classList.toggle('hl', j === k); }); selList.setAttribute('aria-activedescendant', 'opt-' + k); }
+  function pick(k, animate){
+    curBuild = k; var b = BUILDS[k];
+    opts.forEach(function(o, j){ o.setAttribute('aria-selected', j === k ? 'true' : 'false'); });
+    selVal.textContent = b.v; selDate.textContent = b.date;
+    updatePreviewCount();
+    // size in MB the way Windows Explorer counts it (1 MB = 1024 KB), with a Russian decimal comma
+    prevMeta.textContent = 'Java ' + b.mc + ', Iris и Oculus' + (b.size ? ', ' + (b.size / 1048576).toFixed(1).replace('.', ',') + ' МБ' : '');
+    prevDl.setAttribute('href', b.file);
+    prevDl.setAttribute('download', b.name + '.zip');
+    prevDl.setAttribute('aria-label', 'Скачать Better Voxels ' + b.v);
+    prevDl.dataset.v = b.v;
+    prevImg.style.backgroundImage = b.img ? 'url("' + b.img + '")' : '';
+    prevBox.classList.toggle('has-img', !!b.img);
+    setName(b.name, animate);
+  }
+  function openSel(){ selList.style.top = prevBox.offsetTop + 'px'; prevBox.inert = true; pickBox.classList.add('listing'); sel.classList.add('open'); placeInd(curBuild, false); selBtn.setAttribute('aria-expanded', 'true'); setHl(curBuild); selList.focus({preventScroll:true}); }
+  function closeSel(focusBtn){ prevBox.inert = false; pickBox.classList.remove('listing'); sel.classList.remove('open'); selBtn.setAttribute('aria-expanded', 'false'); if (focusBtn) selBtn.focus({preventScroll:true}); }
+  selBtn.addEventListener('click', function(){ if (sel.classList.contains('open')) closeSel(false); else openSel(); });
+  selList.addEventListener('keydown', function(e){
+    var cols = getComputedStyle(selList).gridTemplateColumns.split(' ').length;
+    if (e.key === 'ArrowRight'){ e.preventDefault(); setHl(Math.min(opts.length - 1, hl + 1)); }
+    else if (e.key === 'ArrowLeft'){ e.preventDefault(); setHl(Math.max(0, hl - 1)); }
+    else if (e.key === 'ArrowDown'){ e.preventDefault(); setHl(Math.min(opts.length - 1, hl + cols)); }
+    else if (e.key === 'ArrowUp'){ e.preventDefault(); setHl(Math.max(0, hl - cols)); }
+    else if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); choose(hl); }
+    else if (e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); closeSel(true); }
+  });
+  function openDialog(){
+    lastFocus = document.activeElement;
+    dlm.hidden = false;
+    dlm.scrollTop = 0;
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ dlm.classList.add('open'); }); });
+    selBtn.focus({preventScroll:true});
+  }
+  function closeDialog(){
+    closeSel(false);
+    dlm.classList.remove('open');
+    setTimeout(function(){ if (!dlm.classList.contains('open')) dlm.hidden = true; }, reduce ? 0 : 600);
+    if (lastFocus) lastFocus.focus();
+  }
+  openDl.addEventListener('click', openDialog);
+  Array.prototype.forEach.call(dlm.querySelectorAll('[data-close]'), function(b){ b.addEventListener('click', closeDialog); });
+  dlm.addEventListener('click', function(e){ if (sel.classList.contains('open') && !sel.contains(e.target)) closeSel(false); });
+  dlm.addEventListener('keydown', function(e){
+    if (e.key === 'Escape'){ e.preventDefault(); closeDialog(); return; }
+    if (e.key !== 'Tab') return;
+    var f = Array.prototype.filter.call(dlm.querySelectorAll('button,a[href],[tabindex="0"],#selList'), function(x){ return x.offsetParent !== null && !x.closest('[inert]') && (x !== selList || sel.classList.contains('open'));  });
+    if (!f.length) return;
+    if (e.shiftKey && document.activeElement === f[0]){ e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && document.activeElement === f[f.length - 1]){ e.preventDefault(); f[0].focus(); }
+  });
+  pick(0, false);
+
+  // ---- scroll-driven work, batched to one frame per scroll ----
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav:not(.nav-x) a'));
+  var navSecs = links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); });
+  var prog = document.getElementById('prog'), geo = {navs:[], max:1};
+  function measure(){
+    var sy = sc.scrollTop;
+    geo.navs = navSecs.map(function(sec){ var r = sec.getBoundingClientRect(); return [r.top + sy, r.bottom + sy]; });
+    geo.max = Math.max(1, sc.scrollHeight - sc.clientHeight);
+    // the fixed header lives outside the scroller: keep its right edge clear of the scrollbar
+    root.style.setProperty('--sbw', (innerWidth - sc.clientWidth) + 'px');
+  }
+  var lastProg = -1, lastNav = -2, ticking = false;
+  function scrollWork(){
+    ticking = false;
+    var sy = sc.scrollTop, vh = sc.clientHeight;
+    var pv = clamp(sy/geo.max, 0, 1);
+    if (Math.abs(pv - lastProg) > .001){ lastProg = pv; prog.style.transform = 'scaleX(' + pv.toFixed(4) + ')'; }
+    var yy = sy + vh*.4, cur = -1;
+    geo.navs.forEach(function(b, k){ if (yy > b[0] && yy < b[1]) cur = k; });
+    if (cur !== lastNav){ lastNav = cur; links.forEach(function(a, k){ a.classList.toggle('on', k === cur); }); }
+  }
+  function onScroll(){ if (!ticking){ ticking = true; requestAnimationFrame(scrollWork); } }
+  sc.addEventListener('scroll', onScroll, {passive:true});
+  addEventListener('resize', function(){ measure(); onScroll(); });
+  if ('ResizeObserver' in window) new ResizeObserver(function(){ measure(); onScroll(); }).observe(document.querySelector('main'));
+  measure(); scrollWork();
+
+  // ---- loading line: follows the eager (first-screen) images, fills on load, and starts again when the page is left ----
+  (function(){
+    var pl = document.getElementById('pl'), bar = pl.firstElementChild, best = .08;
+    function to(v){ if (v <= best) return; best = v; var cur = getComputedStyle(bar).transform; pl.classList.add('set'); bar.style.transform = cur === 'none' ? '' : cur; bar.getBoundingClientRect(); bar.style.transform = 'scaleX(' + v + ')'; }
+    function finish(){ to(1); pl.classList.add('done'); }
+    if (document.readyState === 'complete'){ pl.classList.add('set', 'done'); }
+    else {
+      var imgs = Array.prototype.filter.call(document.images, function(im){ return im.loading !== 'lazy' && !im.complete; }), left = imgs.length, n = left;
+      imgs.forEach(function(im){ var f = function(){ left--; to(.15 + .7 * (n - left) / n); }; im.addEventListener('load', f, {once:true}); im.addEventListener('error', f, {once:true}); });
+      addEventListener('load', finish);
+    }
+    // reload or leaving: run the line again so the browser's own bar isn't the only thing that moves
+    addEventListener('beforeunload', function(){ best = 0; pl.classList.remove('done', 'set'); bar.style.transform = ''; bar.style.animation = 'none'; bar.getBoundingClientRect(); bar.style.animation = ''; });
+    addEventListener('pageshow', function(e){ if (e.persisted) finish(); });
+  })();
+
+  // ---- "Скачать": stop where the credits card ends at the bottom of the screen, so the footer stays out of view;
+  // on a short screen the download cards' top wins and the jump goes no further than the section's top ----
+  (function(){
+    var get = document.getElementById('get'), thanks = document.querySelector('.thanks');
+    var dl = document.getElementById('dlcard'), vers = document.getElementById('versions'), bar = document.querySelector('.bar');
+    Array.prototype.forEach.call(document.querySelectorAll('a[href="#get"]'), function(a){
+      a.addEventListener('click', function(e){
+        e.preventDefault();
+        var y = sc.scrollTop, top = y + get.getBoundingClientRect().top;
+        var fit = y + thanks.getBoundingClientRect().bottom + 28 - sc.clientHeight, to = Math.min(top, fit);
+        // phones stack "Что нового" above the download card: go to the download card itself, just under the top bar
+        var d = dl.getBoundingClientRect();
+        if (d.top >= vers.getBoundingClientRect().bottom){
+          var b = bar.getBoundingClientRect();
+          to = y + d.top - (b.top >= 0 && b.bottom < sc.clientHeight / 3 ? b.bottom + 14 : 16);
+        }
+        sc.scrollTo({top: Math.max(0, to), behavior: reduce ? 'auto' : 'smooth'});
+        if (history.replaceState) history.replaceState(null, '', '#get');
+      });
+    });
+  })();
+
+  // ---- sidebar <-> top bar: when the window crosses the layout line, the new bar slides in ----
+  (function(){
+    var mqSide = matchMedia('(min-width:1100px) and (min-height:520px)'), t = 0;
+    function swap(){ root.classList.remove('bar-swap'); void root.offsetWidth; root.classList.add('bar-swap'); clearTimeout(t); t = setTimeout(function(){ root.classList.remove('bar-swap'); }, 700); }
+    // checked on resize too: some browsers and emulators skip the media 'change' event
+    var was = mqSide.matches;
+    function check(){ var m = mqSide.matches; if (m !== was){ was = m; swap(); } }
+    if (mqSide.addEventListener) mqSide.addEventListener('change', check);
+    addEventListener('resize', check);
+  })();
+
+  // ---- custom scrollbar: thumb follows the scroller, drag it or click the groove to jump ----
+  var sbar = document.getElementById('sbar'), thumb = document.getElementById('sbThumb'), sbH = 0, thH = 40, sbHide = 0;
+  function sbSize(){
+    sbH = sbar.clientHeight;
+    thH = Math.max(36, Math.round(sbH * sc.clientHeight / Math.max(sc.scrollHeight, 1)));
+    thumb.style.height = thH + 'px';
+    sbar.style.visibility = sc.scrollHeight > sc.clientHeight + 1 ? '' : 'hidden';
+    sbPos();
+  }
+  function sbPos(){ thumb.style.transform = 'translateY(' + ((sbH - thH) * clamp(sc.scrollTop / geo.max, 0, 1)).toFixed(1) + 'px)'; }
+  sc.addEventListener('scroll', function(){
+    requestAnimationFrame(sbPos);
+    sbar.classList.add('on'); clearTimeout(sbHide); sbHide = setTimeout(function(){ sbar.classList.remove('on'); }, 900);
+  }, {passive:true});
+  addEventListener('resize', sbSize);
+  if ('ResizeObserver' in window) new ResizeObserver(sbSize).observe(document.querySelector('main'));
+  sbSize();
+  var dragY = 0, dragTop = 0;
+  sbar.addEventListener('pointerdown', function(e){
+    e.preventDefault();
+    var r = thumb.getBoundingClientRect();
+    sc.style.scrollBehavior = 'auto';
+    // a click on the groove first centres the thumb under the pointer, then the drag goes on from there
+    if (e.clientY < r.top || e.clientY > r.bottom){
+      var top = sbar.getBoundingClientRect().top;
+      sc.scrollTop = clamp((e.clientY - top - thH/2) / Math.max(sbH - thH, 1), 0, 1) * geo.max;
+    }
+    dragY = e.clientY; dragTop = sc.scrollTop;
+    sbar.classList.add('drag'); sbar.setPointerCapture(e.pointerId);
+  });
+  sbar.addEventListener('pointermove', function(e){
+    if (!sbar.classList.contains('drag')) return;
+    sc.scrollTop = dragTop + (e.clientY - dragY) * geo.max / Math.max(sbH - thH, 1);
+  });
+  function sbEnd(){ sbar.classList.remove('drag'); sc.style.scrollBehavior = ''; }
+  sbar.addEventListener('pointerup', sbEnd); sbar.addEventListener('pointercancel', sbEnd);
+
+  // Keep the view on reload without triggering another download.
+  var viewKey = 'bv-view:' + location.pathname, savedView = null;
+  try { savedView = JSON.parse(sessionStorage.getItem(viewKey)); } catch (e) {}
+  var navigation = performance.getEntriesByType('navigation')[0];
+  var restoreView = savedView && navigation && navigation.type === 'reload';
+  var viewReady = !restoreView;
+  function saveView(){
+    if (!viewReady) return;
+    try {
+      sessionStorage.setItem(viewKey, JSON.stringify({
+        y: sc.scrollTop, version: BUILDS[curBuild].v,
+        dialog: dlm.classList.contains('open'), selector: sel.classList.contains('open'),
+        dialogY: dlm.scrollTop, selectorY: selList.scrollTop
+      }));
+    } catch (e) {}
+  }
+  addEventListener('pagehide', saveView);
+  addEventListener('beforeunload', saveView);
+  document.addEventListener('visibilitychange', function(){ if (document.hidden) saveView(); });
+  if (restoreView){
+    var loaded = document.readyState === 'complete' ? Promise.resolve() : new Promise(function(resolve){ addEventListener('load', resolve, {once:true}); });
+    Promise.all([loaded, document.fonts ? document.fonts.ready : Promise.resolve()]).then(function(){
+      requestAnimationFrame(function(){
+        var k = BUILDS.findIndex(function(b){ return b.v === savedView.version; });
+        if (k >= 0) pick(k, false);
+        sc.style.scrollBehavior = 'auto';
+        sc.scrollTop = Math.max(0, Number(savedView.y) || 0);
+        if (savedView.dialog){
+          openDialog();
+          if (savedView.selector) openSel();
+          dlm.scrollTop = Math.max(0, Number(savedView.dialogY) || 0);
+          selList.scrollTop = Math.max(0, Number(savedView.selectorY) || 0);
+        }
+        requestAnimationFrame(function(){ sc.style.scrollBehavior = ''; viewReady = true; });
+      });
+    });
+  }
+})();
+</script>
+<script src="i18n-dict.js"></script>
+<script src="i18n.js"></script>
+
+</body>
+</html>
