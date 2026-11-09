@@ -17,6 +17,7 @@ if(['ru','uk','be','kk'].indexOf(l)<0){document.documentElement.classList.add('i
 <style>
 /* same clay surface and tokens as the main page (copied from index.html by changelog_build.py) */
 :root{
+  --accent:#6476fc; --hero-better:#eef0f3;
   --bg:#e3e6eb;
   --hi:#ffffff;
   --lo:rgba(150,160,178,.62);
@@ -88,7 +89,7 @@ p{margin:0;text-wrap:pretty}
   font-family:var(--f-mono);font-size:13px;letter-spacing:.04em;cursor:pointer;
   box-shadow:5px 5px 12px var(--lo),-5px -5px 12px var(--hi),inset 0 0 0 transparent,inset 0 0 0 transparent;transition:box-shadow .3s var(--io),translate .4s var(--xo),scale .2s var(--io)}
 .btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-@media (hover:hover){ .btn:hover{translate:0 -2px} }
+@media (hover:hover){ .btn:hover{translate:0 0} }
 .btn:active{scale:.97;box-shadow:0 0 0 transparent,0 0 0 transparent,inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
 
 /* kind colours: one hue per kind, used for the tag, the counters and the row markers */
@@ -236,6 +237,7 @@ p{margin:0;text-wrap:pretty}
 }
 @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
 </style>
+<link rel="stylesheet" href="accent.css?v=20261109-spatial-glow">
 </head>
 <body>
 <aside class="side" aria-label="Навигация">

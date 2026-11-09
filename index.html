@@ -22,6 +22,7 @@ html{-webkit-tap-highlight-color:transparent}
 <style>
 /* Layout: one soft clay surface; every block is pressed out of it or sunk into it, arranged like the shader's own settings menu */
 :root{
+  --accent:#6476fc; --hero-better:#eef0f3;
   --bg:#e3e6eb;
   --hi:#ffffff;
   --lo:rgba(150,160,178,.62);
@@ -188,13 +189,13 @@ p{margin:0;max-width:56ch;text-wrap:pretty}
 .screen .btn:not(.solid){color:var(--ink)}
 .title{margin:0 0 clamp(14px,2vw,22px);font-family:var(--f-display);font-size:clamp(40px,9vw,120px);line-height:.95;letter-spacing:-.045em}
 /* hollow outline drawn around the whole letter shape, so overlapping glyph contours stay hidden */
-.title .o{display:block;font-weight:300;color:transparent;--ink:var(--title);
+.title .o{display:block;font-weight:300;color:transparent;--ink:var(--hero-better);
   text-shadow:1.60px 0 0 var(--ink),1.48px .61px 0 var(--ink),1.13px 1.13px 0 var(--ink),.61px 1.48px 0 var(--ink),0 1.60px 0 var(--ink),-.61px 1.48px 0 var(--ink),-1.13px 1.13px 0 var(--ink),-1.48px .61px 0 var(--ink),-1.60px 0 0 var(--ink),-1.48px -.61px 0 var(--ink),-1.13px -1.13px 0 var(--ink),-.61px -1.48px 0 var(--ink),0 -1.60px 0 var(--ink),.61px -1.48px 0 var(--ink),1.13px -1.13px 0 var(--ink),1.48px -.61px 0 var(--ink)}
 /* at this tight tracking the two t crossbars touch and the outline traces them as one bar: open the pair */
 .title .o .tt{margin-left:.07em}
 /* the thin B has a wider left side-bearing than the bold V: pull "Better" left so both start on one line */
 .title .o{margin-left:-.07em}
-.title .s{display:block;font-weight:800;color:var(--title);text-shadow:0 4px 24px var(--lo)}
+.title .s{display:block;font-weight:800;color:var(--title);text-shadow:none}
 .tag{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em;color:#dde1e8;margin:0 0 clamp(18px,2.4vw,28px)}
 .lead{font-size:clamp(16px,1.4vw,19px);margin-bottom:26px;max-width:52ch;color:var(--ink)}
 .player{position:relative;z-index:1;display:flex;align-items:center;gap:12px;margin-left:auto}
@@ -349,7 +350,7 @@ p{margin:0;max-width:56ch;text-wrap:pretty}
 .thanks .credits{grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
 .credit{display:flex;align-items:center;gap:12px;height:100%;padding:12px 14px;border-radius:18px;text-decoration:none;color:var(--ink);background:var(--bg);
   box-shadow:4px 4px 10px var(--lo),-4px -4px 10px var(--hi),inset 0 0 0 transparent,inset 0 0 0 transparent;transition:box-shadow .3s var(--io),scale .2s var(--io),translate .4s var(--xo),background-color .5s var(--io)}
-@media (hover:hover){ .credit:hover{translate:0 -2px} }
+@media (hover:hover){ .credit:hover{translate:0 0} }
 .credit:active{scale:.97;box-shadow:0 0 0 transparent,0 0 0 transparent,inset 3px 3px 7px var(--lo),inset -3px -3px 7px var(--hi)}
 .cr-ic{flex:none;width:22px;height:22px;fill:var(--ink-2)}
 .cr-t{display:grid;gap:2px;min-width:0}
@@ -412,11 +413,11 @@ p{margin:0;max-width:56ch;text-wrap:pretty}
 
 /* smooth surfaces */
 .card,.btn,.stat,.inset,.raise-sm,.switch,.seg button,.pills span,.req span,.shot,.cmp-knob,.cmp-tag{transition:background-color .5s var(--io),box-shadow .5s var(--io),color .5s var(--io),translate .5s var(--io)}
-/* buttons: one eased lift on hover, a soft press on click */
-/* hover lift through a variable (one translate) */
+/* buttons stay still on hover; keep the soft press on click */
+/* stable hover position */
 .btn{translate:0 var(--lift,0px);transition:background-color .5s var(--io),box-shadow .3s var(--io),color .5s var(--io),translate .4s var(--xo),scale .2s var(--io)}
 @media (hover:hover){
-  .btn:hover{--lift:-2px}
+  .btn:hover{--lift:0px}
 }
 .log li{animation:li .6s var(--io) both;animation-delay:var(--d,0ms)}
 @keyframes li{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -452,7 +453,7 @@ p{margin:0;max-width:56ch;text-wrap:pretty}
 .switch::after{transition:transform .45s var(--xo),background .3s,box-shadow .3s,scale .2s var(--io)}
 .title .o,.title .s{transform-origin:0 100%}
 .vpill,.brand{transition:transform .5s var(--xo)}
-@media (hover:hover){ .vpill:hover{transform:translateY(-2px)} }
+@media (hover:hover){ .vpill:hover{transform:none} }
 
 /* motion: surfaces press out of the clay as they enter */
 /* the cover, title and numbers used to fade/slide in on load (.ld); removed at the owner's request: the first screen is shown at once */
@@ -783,6 +784,7 @@ p{margin:0;max-width:56ch;text-wrap:pretty}
   filter:drop-shadow(0 18px 24px rgba(0,0,0,.35))}
 #sc > main{position:relative;z-index:1}
 </style>
+<link rel="stylesheet" href="accent.css?v=20261109-spatial-glow">
 </head>
 <body>
 <div class="pl" id="pl" aria-hidden="true"><i></i></div>
@@ -1111,14 +1113,14 @@ p{margin:0;max-width:56ch;text-wrap:pretty}
           <div class="prev-meta" id="prevMeta">Java 1.18.2 – 26.3, Iris и Oculus</div>
           <div class="prev-downloads"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg><b id="prevCount" aria-live="polite">—</b><span>Загрузок</span></div>
         </div>
-        <a class="btn prev-dl" id="prevDl" href="#" download><span class="dl-ready">Скачать</span><span class="dl-paint" aria-hidden="true"><span class="dl-fill"></span></span><span class="dl-success" aria-hidden="true">Успешно</span></a>
+        <div class="dl-action"><span class="dl-rest-halo" aria-hidden="true"></span><span class="dl-halo" aria-hidden="true"><span class="dl-halo-mask"><span class="dl-halo-paint"><span class="dl-halo-fill"></span></span></span></span><a class="btn prev-dl" id="prevDl" href="#" download><span class="dl-base" aria-hidden="true"></span><span class="dl-ready">Скачать</span><span class="dl-paint" aria-hidden="true"><span class="dl-fill"></span></span><span class="dl-success" aria-hidden="true">Успешно</span></a></div>
       </div>
     </div>
     </div>
   </div>
 </div>
 
-<script src="download-motion.js"></script>
+<script src="download-motion.js?v=20261109-spatial-glow"></script>
 <script src="motion-blur.js" defer></script>
 <script src="overscroll-egg.js" defer></script>
 <script>
